@@ -1,4 +1,13 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.0.4
+Date: 2022-11-12
+  Changes:
+    - Better stability between updates
+  Features:
+    - Added new setting for double enemies
+  Bugfixes:
+    - Fixed spawn of enemies (it crashed because of a bit strange reason)
+---------------------------------------------------------------------------------------------------
 Version: 0.0.3
 Date: 2022-11-12
   Bugfixes:

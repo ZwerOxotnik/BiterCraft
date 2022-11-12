@@ -516,7 +516,7 @@ local function create_lobby_settings_GUI(player)
 	-- textfield_content.add(LABEL).caption = "Biter difficulty:"
 	-- textfield_content.add{type = "textfield", name = "BC_biter_difficulty_textfield", text = 30, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
 	textfield_content.add(LABEL).caption = {'', "Defend lines", COLON}
-	textfield_content.add{type = "textfield", name = "BC_defend_lines_textfield", text = 3, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+	textfield_content.add{type = "textfield", name = "BC_defend_lines_textfield", text = mod_data.defend_lines_count or 3, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
 	-- content2.add(LABEL).caption = "Map size:"
 	-- content2.add{type = "textfield", name = "BC_map_size_textfield", text = 30000}.style.maximal_width = 70
 
@@ -532,6 +532,10 @@ local function create_lobby_settings_GUI(player)
 	-- local BC_wave_bosses_flow = main_frame.add{type = "flow", name = "BC_wave_bosses_flow"}
 	-- BC_wave_bosses_flow.add(LABEL).caption = {'', "Wave bosses", COLON}
 	-- BC_wave_bosses_flow.add{type = "checkbox", name = "BC_wave_bosses_checkbox", state = false}
+
+	local BC_wave_bosses_flow = main_frame.add{type = "flow", name = "BC_double_wave_flow"}
+	BC_wave_bosses_flow.add(LABEL).caption = {'', "Double enemies each 10th wave", COLON}
+	BC_wave_bosses_flow.add{type = "checkbox", name = "BC_double_wave_checkbox", state = mod_data.is_double_wave_on or false}
 
 	-- local PvP_attacks_flow = main_frame.add{type = "flow", name = "BC_PvP_attacks_flow"}
 	-- PvP_attacks_flow.add(LABEL).caption = {'', "Players attacks", COLON}
@@ -638,6 +642,9 @@ local GUIS = {
 			end
 			mod_data.defend_lines_count = defend_lines_count
 
+			local double_wave_checkbox = main_frame.BC_double_wave_flow.BC_double_wave_checkbox
+			mod_data.is_double_wave_on = double_wave_checkbox.state
+
 			delete_settings_gui()
 			set_game_rules_by_settings()
 		else
@@ -690,7 +697,8 @@ do
 		end
 		if mod_data.generate_new_round then return end
 
-		mod_data.current_wave = mod_data.current_wave + 1
+		local current_wave = mod_data.current_wave + 1
+		mod_data.current_wave = current_wave
 		mod_data.last_wave_tick = event.tick
 		local surface = game.get_surface(1)
 
@@ -713,6 +721,10 @@ do
 		end
 		mod_data.spawn_enemy_count = mod_data.spawn_enemy_count + spawn_per_wave * 2
 
+		-- TODO: change it?
+		local enemy_unit_group = surface.create_unit_group{position={0, 0}, force="enemy"}
+		mod_data.enemy_unit_group = enemy_unit_group
+
 		-- Copy and paste enemies
 		local defend_lines_count = mod_data.defend_lines_count
 		local h_size = floor(defend_lines_count/2)
@@ -723,12 +735,17 @@ do
 			destination_left_top[2] = (length/2) * i + 10
 			destination_right_bottom[1] = map_border + length - 10
 			destination_right_bottom[2] = (length/2) * i + height - 10
-			clone_area(clone_data)
+			if mod_data.is_double_wave_on and (current_wave % 10 == 0) then
+				clone_area(clone_data)
+				clone_area(clone_data)
+			else
+				clone_area(clone_data)
+			end
 		end
 
 		-- Command to attack
 		command_data.target = mod_data.target_entity
-		mod_data.enemy_unit_group.set_command(command_data)
+		enemy_unit_group.set_command(command_data)
 
 		game.print({"BiterCraft.new_wave"}, YELLOW_COLOR)
 	end
@@ -856,6 +873,7 @@ function update_global_data()
 	mod_data.last_round_tick = mod_data.last_round_tick or game.tick
 	mod_data.spawn_per_wave = mod_data.spawn_per_wave or 1
 	mod_data.generate_new_round_tick = mod_data.generate_new_round_tick
+	mod_data.is_double_wave_on = mod_data.is_double_wave_on or false
 
 	link_data()
 end
@@ -876,8 +894,16 @@ M.on_load = function()
 	link_data()
 	add_event_filters()
 end
-
---#endregion
+M.on_configuration_changed = function()
+	delete_settings_gui()
+	if mod_data.is_settings_set == false then
+		for _, player in pairs(game.players) do
+			if player.valid then
+				create_lobby_settings_GUI(player) -- TODO: change it!
+			end
+		end
+	end
+end
 
 
 M.events = {
