@@ -4,6 +4,8 @@ local M = {}
 
 -- TODO: use another sound when a wave starts
 -- TODO: spawn cars and put player in them
+-- TODO: remind players about commands
+-- TODO: track player data
 
 
 --#region Global game data
@@ -811,6 +813,41 @@ commands.add_command("wave-time", {"BiterCraft-commands.wave-time"}, function(cm
 	local player = game.get_player(cmd.player_index)
 	if not (player and player.valid) then return end
 	print_time_before_wave(player)
+end)
+
+commands.add_command("spawn", {"BiterCraft-commands.spawn"}, function(cmd)
+	if cmd.player_index == 0 then -- server
+		return
+	end
+
+	local player = game.get_player(cmd.player_index)
+	if not (player and player.valid) then return end
+
+	local surface = game.get_surface(1)
+	local target_position = {0, 0}
+	local character = player.character
+	if not (character and character.valid) then
+		player.teleport({target_position}, surface)
+	else
+		local target
+		local vehicle = player.vehicle
+		local target_name
+		if vehicle and not vehicle.train and vehicle.get_driver() == character and vehicle.get_passenger() == nil then
+			target = vehicle
+			target_name = vehicle.name
+		else
+			target = player
+			target_name = character.name
+		end
+		local radius = 200
+		local non_colliding_position = surface.find_non_colliding_position(target_name, target_position, radius, 1)
+
+		if non_colliding_position then
+			target.teleport(non_colliding_position, surface)
+		else
+			player.print("It's not possible to teleport you because there's not enough space for your character")
+		end
+	end
 end)
 
 
