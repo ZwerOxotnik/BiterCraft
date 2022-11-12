@@ -3,6 +3,7 @@ local M = {}
 
 
 -- TODO: use another sound when a wave starts
+-- TODO: spawn cars and put player in them
 
 
 --#region Global game data
@@ -889,7 +890,7 @@ M.events = {
 }
 
 M.on_nth_tick = {
-	[60 * 60 * 2] = check_is_settings_set,
+	[60 * 60 * 1] = check_is_settings_set,
 	[60 * 60 * 5] = start_new_wave,
 	[60 * 60 * 10] = function(event)
 		if event.tick < mod_data.last_wave_tick + (60 * 60 * 5) then
