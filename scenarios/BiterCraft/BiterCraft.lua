@@ -2,6 +2,9 @@
 local M = {}
 
 
+-- TODO: use another sound when a wave starts
+
+
 --#region Global game data
 local mod_data
 --#endregion
@@ -15,6 +18,20 @@ local EMPTY_WIDGET = {type = "empty-widget"}
 local COLON = {"colon"}
 local LABEL = {type = "label"}
 local YELLOW_COLOR = {1, 1, 0}
+
+
+local biter_upgrades = {
+	"small-biter",
+	"medium-biter",
+	"big-biter",
+	"behemoth-biter"
+}
+local spitter_upgrades = {
+	"small-spitter",
+	"medium-spitter",
+	"big-spitter",
+	"behemoth-spitter"
+}
 
 
 --#region Util
@@ -73,9 +90,14 @@ function print_defend_points(player)
 		points_data = points_data .. ("[gps=%d,%d] "):format(point[1], point[2])
 	end
 
-	local message = {'', {"BiterCraft.main_defend_target"}, COLON, main_defend_point_text, '\n',
-		{"BiterCraft.defend_points"}, COLON, points_data
-	}
+	local message = {'', {"BiterCraft.main_defend_target"}, COLON, main_defend_point_text}
+	if #mod_data.defend_points > 0 then
+		table.insert(message, '\n')
+		table.insert(message, {"BiterCraft.defend_points"})
+		table.insert(message, COLON)
+		table.insert(message, points_data)
+	end
+
 	if player then
 		player.print(message, YELLOW_COLOR)
 	else
@@ -87,6 +109,17 @@ function print_defend_points(player)
 	end
 end
 
+
+function delete_settings_gui()
+	for _, player in pairs(game.players) do
+		if player.valid then
+			local frame = player.gui.center.BC_lobby_settings_frame
+			if frame and frame.valid then
+				frame.destroy()
+			end
+		end
+	end
+end
 
 function teleport_players_to_center(players)
 	local surface = game.get_surface(1)
@@ -108,7 +141,7 @@ do
 	local biter_pos = {0, 0}
 	local biter_data = {name = "", force = "enemy", position = biter_pos}
 	function upgrade_biters()
-		if mod_data.enemy_tech_lvl >= 3 then return end
+		if mod_data.enemy_tech_lvl >= #biter_upgrades then return end
 		local surface = game.get_surface(1)
 
 		local entities = surface.find_entities(
@@ -244,7 +277,7 @@ local function make_defend_lines()
 	local clone_data = {
 		source_area={left_top = {-length/2, -height/2}, right_bottom = {length/2, height/2}},
 		destination_area={left_top = destination_left_top, right_bottom = destination_right_bottom},
-		clone_tiles=true, clone_entities=true,
+		clone_tiles=true, clone_entities=false,
 		clone_decoratives=false, clear_destination_entities=false,
 		clear_destination_decoratives=false, expand_map=false,
 		create_build_effect_smoke=false
@@ -274,17 +307,63 @@ local function make_defend_lines()
 		entity_data.name = "big-worm-turret"
 		surface.create_entity(entity_data)
 	end
+
+	print_defend_points()
+end
+
+local function set_game_rules_by_settings()
+	if mod_data.is_settings_set then return end
+
+	if #mod_data.defend_points == 0 then
+		make_defend_lines()
+	end
+
+	mod_data.is_settings_set = true
 end
 
 local function make_defend_target()
 	local surface = game.get_surface(1)
 	local entity = surface.create_entity{
-		name="rocket-silo", force = "player",
+		name = "rocket-silo", force = "player",
 		position = {0, 0}
 	}
 	entity.minable = false
 	mod_data.target_entity = entity
 	mod_data.entity_target_event_id = script.register_on_entity_destroyed(entity)
+
+	local turret_name = "gun-turret"
+	if game.entity_prototypes[turret_name] then
+		local turret = surface.create_entity{
+			name = turret_name, force = "player",
+			position = {15, 0}
+		}
+
+		local ammo_name = "firearm-magazine"
+		if game.item_prototypes[ammo_name] then
+			local stack = {name = ammo_name, count = 200}
+			turret.insert(stack)
+		end
+	end
+
+	if game.entity_prototypes["electric-energy-interface"] then
+		entity = surface.create_entity{
+			name = "electric-energy-interface", force = "player",
+			position = {-15, 0}
+		}
+		entity.minable = false
+		entity.operable = false
+		entity.destructible = true
+		entity.power_production = 1000
+		entity.electric_buffer_size = 500
+		entity.power_usage = 0
+	end
+
+	if game.entity_prototypes["substation"] then
+		entity = surface.create_entity{
+			name = "substation", force = "player",
+			position = {-18, 0}
+		}
+	end
 end
 
 local function create_resources()
@@ -430,13 +509,13 @@ local function create_lobby_settings_GUI(player)
 	-- modes_flow.add{type = "drop-down", items = {"PvP", "PvE", "PvPvE"}, selected_index = is_multiplayer and 3 or 2}
 
 
-	local content2 = main_frame.add{type = "table", name = "BC_content2", column_count = 2}
+	local textfield_content = main_frame.add{type = "table", name = "BC_textfield_content", column_count = 2}
 	-- content2.add(LABEL).caption = {'', "Biter price multiplier", COLON}
 	-- content2.add{type = "textfield", name = "BC_biter_price_mult_textfield", text = 1}.style.maximal_width = 70
-	content2.add(LABEL).caption = "Biter difficulty:"
-	content2.add{type = "textfield", name = "BC_biter_difficulty_textfield", text = 30}.style.maximal_width = 70
-	content2.add(LABEL).caption = {'', "Defend lines", COLON}
-	content2.add{type = "textfield", name = "BC_defend_lines_textfield", text = 3}.style.maximal_width = 70
+	-- textfield_content.add(LABEL).caption = "Biter difficulty:"
+	-- textfield_content.add{type = "textfield", name = "BC_biter_difficulty_textfield", text = 30, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+	textfield_content.add(LABEL).caption = {'', "Defend lines", COLON}
+	textfield_content.add{type = "textfield", name = "BC_defend_lines_textfield", text = 3, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
 	-- content2.add(LABEL).caption = "Map size:"
 	-- content2.add{type = "textfield", name = "BC_map_size_textfield", text = 30000}.style.maximal_width = 70
 
@@ -445,13 +524,13 @@ local function create_lobby_settings_GUI(player)
 	-- biter_crafting_flow.add(LABEL).caption = {'', "Biter crafting with science", COLON}
 	-- biter_crafting_flow.add{type = "checkbox", name = "BC_biter_crafting_checkbox", state = true}
 
-	local ev_on_techs_flow = main_frame.add{type = "flow", name = "BC_ev_on_techs_flow"}
-	ev_on_techs_flow.add(LABEL).caption = {'', "Evolution on techs", COLON}
-	ev_on_techs_flow.add{type = "checkbox", name = "BC_ev_on_techs_checkbox", state = false}
+	-- local ev_on_techs_flow = main_frame.add{type = "flow", name = "BC_ev_on_techs_flow"}
+	-- ev_on_techs_flow.add(LABEL).caption = {'', "Evolution on techs", COLON}
+	-- ev_on_techs_flow.add{type = "checkbox", name = "BC_ev_on_techs_checkbox", state = false}
 
-	local BC_wave_bosses_flow = main_frame.add{type = "flow", name = "BC_wave_bosses_flow"}
-	BC_wave_bosses_flow.add(LABEL).caption = {'', "Wave bosses", COLON}
-	BC_wave_bosses_flow.add{type = "checkbox", name = "BC_wave_bosses_checkbox", state = false}
+	-- local BC_wave_bosses_flow = main_frame.add{type = "flow", name = "BC_wave_bosses_flow"}
+	-- BC_wave_bosses_flow.add(LABEL).caption = {'', "Wave bosses", COLON}
+	-- BC_wave_bosses_flow.add{type = "checkbox", name = "BC_wave_bosses_checkbox", state = false}
 
 	-- local PvP_attacks_flow = main_frame.add{type = "flow", name = "BC_PvP_attacks_flow"}
 	-- PvP_attacks_flow.add(LABEL).caption = {'', "Players attacks", COLON}
@@ -495,17 +574,27 @@ end
 
 
 local function on_game_created_from_scenario()
-	generate_map_territory()
-	create_resources() -- the map shouldn't have entities
-	make_defend_lines()
-	make_defend_target()
+	local surface = game.get_surface(1)
 
+	mod_data.defend_points = {}
 	mod_data.last_wave_tick = game.tick
+	mod_data.is_settings_set = false -- TODO: change it!
 	mod_data.generate_new_round = false
 	mod_data.last_round_tick = game.tick
 	mod_data.spawn_enemy_count = 0
-	mod_data.enemy_tech_lvl = 0
-	mod_data.current_wave = 0
+	mod_data.enemy_tech_lvl = 1
+	mod_data.enemy_unit_group = surface.create_unit_group{position={0, 0}, force="enemy"}
+
+	generate_map_territory()
+	create_resources() -- the map shouldn't have entities
+	make_defend_target()
+
+	delete_settings_gui()
+	for _, player in pairs(game.players) do
+		if player.valid then
+			create_lobby_settings_GUI(player) -- TODO: change it!
+		end
+	end
 
 	game.print({"BiterCraft.new_round_ready"}, YELLOW_COLOR)
 	for _, player in pairs(game.players) do
@@ -513,6 +602,7 @@ local function on_game_created_from_scenario()
 			insert_start_items(player)
 		end
 	end
+
 	print_time_before_wave()
 	print_defend_points()
 end
@@ -523,6 +613,7 @@ local function on_entity_destroyed(event)
 		return
 	end
 
+	-- TODO: delay it with message
 	new_round()
 end
 
@@ -533,16 +624,21 @@ local GUIS = {
 	end,
 	BC_confirm_settings = function(element, player, event)
 		if player.admin then
-			for _, _player in pairs(game.players) do
-				if _player.valid then
-					local lobby_settings_frame = _player.gui.center.BC_lobby_settings_frame
-					if lobby_settings_frame then
-						lobby_settings_frame.destroy()
-					end
-				end
-			end
+			local main_frame = player.gui.center.BC_lobby_settings_frame
+			local textfield_content = main_frame.BC_textfield_content
+			local defend_lines_textfield = textfield_content.BC_defend_lines_textfield
 
-			mod_data.is_settings_set = true
+			local defend_lines_count = tonumber(defend_lines_textfield.text)
+			if defend_lines_count < 1 then
+				defend_lines_count = 1
+			end
+			if defend_lines_count > 10 then
+				defend_lines_count = 10
+			end
+			mod_data.defend_lines_count = defend_lines_count
+
+			delete_settings_gui()
+			set_game_rules_by_settings()
 		else
 		end
 	end
@@ -556,6 +652,18 @@ local function on_gui_click(event)
 	if f then
 		f(element, player, event)
 	end
+end
+
+
+
+function check_is_settings_set(event)
+	if mod_data.is_settings_set then return end
+	if event.tick < mod_data.last_round_tick + (60 * 60 * 4) then return end
+
+	-- TODO: check players
+	-- mod_data.last_round_tick = event.tick
+	delete_settings_gui()
+	set_game_rules_by_settings()
 end
 
 
@@ -589,29 +697,14 @@ do
 		local create_entity = surface.create_entity
 		local spawn_per_wave = mod_data.spawn_per_wave
 		local enemy_tech_lvl = mod_data.enemy_tech_lvl
-		if enemy_tech_lvl == 0 then
-			biter_data.name = "small-biter"
-		elseif enemy_tech_lvl == 1 then
-			biter_data.name = "medium-biter"
-		elseif enemy_tech_lvl == 2 then
-			biter_data.name = "big-biter"
-		else
-			biter_data.name = "behemoth-biter"
-		end
+		biter_data.name = biter_upgrades[enemy_tech_lvl]
 		for _ = 1, spawn_per_wave do
 			biter_pos[1] = random(25000, 25050)
 			biter_pos[2] = random(10, 50)
 			create_entity(biter_data)
 		end
-		if enemy_tech_lvl == 0 then
-			biter_data.name = "small-spitter"
-		elseif enemy_tech_lvl == 1 then
-			biter_data.name = "medium-spitter"
-		elseif enemy_tech_lvl == 2 then
-			biter_data.name = "big-spitter"
-		else
-			biter_data.name = "behemoth-spitter"
-		end
+
+		biter_data.name = spitter_upgrades[enemy_tech_lvl]
 		for _ = 1, spawn_per_wave do
 			biter_pos[1] = random(25000, 25050)
 			biter_pos[2] = random(10, 50)
@@ -755,9 +848,10 @@ function update_global_data()
 	mod_data.enemy_unit_group = mod_data.enemy_unit_group or surface.create_unit_group{position={0, 0}, force="enemy"}
 	mod_data.last_wave_tick = mod_data.last_wave_tick or game.tick
 	mod_data.generate_new_round = mod_data.generate_new_round or false
-	mod_data.is_settings_set = mod_data.is_settings_set or true
+	mod_data.is_settings_set = mod_data.is_settings_set or false
+	mod_data.defend_points = mod_data.defend_points or {}
 	mod_data.spawn_enemy_count = mod_data.spawn_enemy_count or 0
-	mod_data.enemy_tech_lvl = mod_data.enemy_tech_lvl or 0
+	mod_data.enemy_tech_lvl = mod_data.enemy_tech_lvl or 1
 	mod_data.last_round_tick = mod_data.last_round_tick or game.tick
 	mod_data.spawn_per_wave = mod_data.spawn_per_wave or 1
 	mod_data.generate_new_round_tick = mod_data.generate_new_round_tick
@@ -795,6 +889,7 @@ M.events = {
 }
 
 M.on_nth_tick = {
+	[60 * 60 * 2] = check_is_settings_set,
 	[60 * 60 * 5] = start_new_wave,
 	[60 * 60 * 10] = function(event)
 		if event.tick < mod_data.last_wave_tick + (60 * 60 * 5) then
@@ -804,10 +899,10 @@ M.on_nth_tick = {
 		mod_data.spawn_per_wave = mod_data.spawn_per_wave + 1
 	end,
 	[60 * 60 * 30] = function(event)
-		if mod_data.enemy_tech_lvl >= 3 then return end
+		if mod_data.enemy_tech_lvl >= #biter_upgrades then return end
 		if event.tick < mod_data.last_round_tick + (60 * 60 * 60 * 2) then
 			if event.tick > mod_data.last_round_tick + (60 * 60 * 60 * 1) then
-				if mod_data.enemy_tech_lvl == 0 then
+				if mod_data.enemy_tech_lvl == 1 then
 					upgrade_biters()
 				end
 			end
