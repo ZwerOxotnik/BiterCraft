@@ -8,7 +8,7 @@ Date: 2022-11-13
     - Fixed player start stuff
     - Friendly fire is off now
   Changes:
-    - Players spawns in cars
+    - Players spawn in cars
 ---------------------------------------------------------------------------------------------------
 Version: 0.0.5
 Date: 2022-11-12
