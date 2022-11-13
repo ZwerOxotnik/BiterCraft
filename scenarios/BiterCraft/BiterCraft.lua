@@ -3,7 +3,6 @@ local M = {}
 
 
 -- TODO: use another sound when a wave starts
--- TODO: spawn cars and put player in them
 -- TODO: remind players about commands
 -- TODO: track player data
 
@@ -462,6 +461,7 @@ local function make_defend_target()
 	end
 end
 
+-- TODO: Recheck with other ores
 local function create_resources()
 	local map_size = mod_data.map_size
 	local h_map_size = map_size / 2
@@ -483,7 +483,7 @@ local function create_resources()
 	local position = {0, 0}
 	local resource_data = {name="", amount=4294967295, snap_to_tile_center=true, position=position}
 
-	local start_x = -map_size / 2 + 200
+	local start_x = -map_size / 2 + 100
 	local start_y = -100
 
 	local function create_resourse_zones()
@@ -512,29 +512,20 @@ local function create_resources()
 		end
 	end
 
-	resource_data.name = "coal"
-	create_resourse_zones()
-
-	start_x = start_x + 100
-	resource_data.name = "copper-ore"
-	create_resourse_zones()
-
-	start_x = start_x + 100
-	resource_data.name = "iron-ore"
-	create_resourse_zones()
-
-	start_x = start_x + 100
-	resource_data.name = "stone"
-	create_resourse_zones()
-
-	start_x = start_x + 100
-	resource_data.name = "uranium-ore"
-	create_resourse_zones()
+	local resource_count = 0
+	for _, prototype in pairs(game.entity_prototypes) do
+		if prototype.type == "resource" and prototype.name ~= "crude-oil" then
+			resource_count = resource_count + 1
+			start_x = start_x + 100
+			resource_data.name = prototype.name
+			create_resourse_zones()
+		end
+	end
 
 	-- Oil between ore patches
 	start_x = -map_size / 2 + 200 + 65
 	resource_data.name = "crude-oil"
-	for _ = 1, 4 do
+	for _ = 1, resource_count - 1 do
 		start_x = start_x + 100
 		position[1] = start_x
 		start_y = -100
@@ -550,35 +541,35 @@ local function create_resources()
 
 	source_left_top[1] = start_x
 	source_left_top[2] = start_y
-	source_right_bottom[1] = start_x + 100 * 5
+	source_right_bottom[1] = start_x + (100 * resource_count)
 	source_right_bottom[2] = start_y + 90
 
 	start_y = -start_y
 	destination_left_top[1] = start_x
 	destination_left_top[2] = start_y
-	destination_right_bottom[1] = start_x + 100 * 5
+	destination_right_bottom[1] = start_x + (100 * resource_count)
 	destination_right_bottom[2] = start_y + 90
 	clone_area(clone_data)
 
 	source_left_top[1] = start_x
 	source_left_top[2] = -start_y
-	source_right_bottom[1] = start_x + 100 * 5
+	source_right_bottom[1] = start_x + (100 * resource_count)
 	source_right_bottom[2] = start_y + 90
 	while true do
-		start_x = start_x + 100 * 6
+		start_x = start_x + 100 * (resource_count + 1)
 		if start_x > map_size / 2 - 200 then
 			break
 		end
 		destination_left_top[1] = start_x
 		destination_left_top[2] = -start_y
-		destination_right_bottom[1] = start_x + 100 * 5
+		destination_right_bottom[1] = start_x + (100 * resource_count)
 		destination_right_bottom[2] = start_y + 90
 		clone_area(clone_data)
 	end
 
 	-- Delete entities outside the map
 	local entities = surface.find_entities(
-		{{h_map_size - 200, -h_map_size}, {h_map_size + 500, h_map_size}}
+		{{h_map_size - 200, -h_map_size}, {h_map_size + (100 * resource_count), h_map_size}}
 	)
 	for i = 1, #entities do
 		entities[i].destroy()
