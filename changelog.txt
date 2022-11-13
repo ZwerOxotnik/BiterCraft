@@ -1,4 +1,15 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.0.6
+Date: 2022-11-13
+  Features:
+    - Added new command: /tp <player name> - teleports you to a player
+  Bugfixes:
+    - Fixed lack of wood
+    - Fixed player start stuff
+    - Friendly fire is off now
+  Changes:
+    - Players spawns in cars
+---------------------------------------------------------------------------------------------------
 Version: 0.0.5
 Date: 2022-11-12
   Features:

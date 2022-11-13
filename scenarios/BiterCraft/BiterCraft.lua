@@ -13,7 +13,8 @@ local mod_data
 --#endregion
 
 
-local START_ITEMS = require("start_items")
+local START_PLAYER_ITEMS = require("start_player_items")
+local START_BASE_ITEMS = require("start_base_items")
 local random = math.random
 local floor = math.floor
 local min = math.min
@@ -39,10 +40,77 @@ local spitter_upgrades = {
 
 --#region Util
 
+---@param s string
+local function trim(s)
+	return s:match'^%s*(.*%S)' or ''
+end
+
+local function find_chest()
+	local chest_name = "steel-chest"
+	if game.entity_prototypes[chest_name] then return chest_name end
+	log("Starting chest " .. chest_name .. " is not a valid entity prototype, picking a new container from prototype list")
+
+	for name, chest in pairs(game.entity_prototypes) do
+		if chest.type == "container" then
+			return name
+		end
+	end
+end
+
+local function teleport_safely(player, surface, target_position)
+	local character = player.character
+	if not (character and character.valid) then
+		player.teleport(target_position, surface)
+	else
+		local target
+		local vehicle = player.vehicle
+		local target_name
+		if vehicle and not vehicle.train and vehicle.get_driver() == character and vehicle.get_passenger() == nil then
+			target = vehicle
+			target_name = vehicle.name
+		else
+			target = player
+			target_name = character.name
+		end
+		local radius = 200
+		local non_colliding_position = surface.find_non_colliding_position(target_name, target_position, radius, 10)
+
+		if non_colliding_position then
+			target.teleport(non_colliding_position, surface)
+		else
+			player.print("It's not possible to teleport you because there's not enough space for your character")
+		end
+	end
+end
+
 function insert_start_items(player)
 	local item_prototypes = game.item_prototypes
 
-	for _, item_data in pairs(START_ITEMS) do
+	local car_name = "car"
+	if game.entity_prototypes[car_name] then
+		local surface = game.get_surface(1)
+		local non_colliding_position = surface.find_non_colliding_position(car_name, {0, 0}, 200, 10)
+		if non_colliding_position then
+			local car = surface.create_entity{
+				name = car_name, force = "player",
+				position = player.position
+			}
+			car.set_driver(player)
+
+			local fuel_name = "wood"
+			if item_prototypes[fuel_name] then
+				local stack = {name = fuel_name, count = 600}
+				car.insert(stack)
+			end
+
+			if game.item_prototypes[car_name] then
+				local stack = {name = car_name, count = 1}
+				player.insert(stack)
+			end
+		end
+	end
+
+	for _, item_data in pairs(START_PLAYER_ITEMS) do
 		if item_prototypes[item_data.name] then
 			player.insert(item_data)
 		end
@@ -129,18 +197,12 @@ function teleport_players_to_center(players)
 	local target_position = {0, 0}
 	for _, player in pairs(players) do
 		if player.valid then
-			local non_colliding_position = surface.find_non_colliding_position("character", target_position, 1000, 1)
-			if non_colliding_position then
-				player.teleport(non_colliding_position, surface)
-			else
-				player.print("It's not possible to teleport you because there's not enough space for your character", {1, 0, 0})
-			end
+			teleport_safely(player, surface, target_position)
 		end
 	end
 end
 
 do
-
 	local biter_pos = {0, 0}
 	local biter_data = {name = "", force = "enemy", position = biter_pos}
 	function upgrade_biters()
@@ -367,6 +429,37 @@ local function make_defend_target()
 			position = {-18, 0}
 		}
 	end
+
+	container_name = find_chest()
+	position = surface.find_non_colliding_position(container_name, {0, 0}, 100, 1)
+	if position == nil then
+		log("Can't find non colliding position for " .. container_name)
+	else
+		local item_stack = {name = "", count = 0}
+		local target_position = {0, 0}
+		local non_colliding_position = surface.find_non_colliding_position(container_name, target_position, 100, 1.5)
+		target = surface.create_entity{name = container_name, position = non_colliding_position, force = "player", create_build_effect_smoke = false}
+		for _, item in pairs(START_BASE_ITEMS) do
+			if game.item_prototypes[item.name] then
+				item_stack.name = item.name
+				item_stack.count = item.count
+				while item_stack.count > 0 do
+					local inserted_count = target.insert(item_stack)
+					if inserted_count > 0 then
+						item_stack.count = item_stack.count - inserted_count
+					else
+						non_colliding_position = surface.find_non_colliding_position(container_name, target_position, 100, 1.5)
+						if non_colliding_position == nil then
+							log("Can't find non colliding position for " .. container_name)
+							goto FINISH_START_BASE_ITEMS
+						end
+						target = surface.create_entity{name = container_name, position = non_colliding_position, force = "player", create_build_effect_smoke = false}
+					end
+				end
+			end
+		end
+		:: FINISH_START_BASE_ITEMS ::
+	end
 end
 
 local function create_resources()
@@ -556,6 +649,7 @@ end
 
 
 local function on_player_joined_game(event)
+	local player_index = event.player_index
 	local player = game.get_player(event.player_index)
 	if not (player and player.valid) then return end
 
@@ -565,11 +659,12 @@ local function on_player_joined_game(event)
 
 	if mod_data.generate_new_round then
 		player.print({"BiterCraft.generating_new_round"}, YELLOW_COLOR)
-	else
+	elseif mod_data.init_players[player_index] == nil then
 		insert_start_items(player)
-		print_defend_points(player)
-		print_time_before_wave(player)
+		mod_data.init_players[player_index] = game.tick
 	end
+	print_defend_points(player)
+	print_time_before_wave(player)
 end
 
 local function on_player_created(event)
@@ -579,10 +674,14 @@ local function on_player_created(event)
 	player.print({"BiterCraft.wip_message"}, YELLOW_COLOR)
 end
 
+local function on_player_removed(event)
+	mod_data.init_players[event.player_index] = nil
+end
 
 local function on_game_created_from_scenario()
 	local surface = game.get_surface(1)
 
+	mod_data.init_players = {}
 	mod_data.defend_points = {}
 	mod_data.last_wave_tick = game.tick
 	mod_data.is_settings_set = false -- TODO: change it!
@@ -825,29 +924,34 @@ commands.add_command("spawn", {"BiterCraft-commands.spawn"}, function(cmd)
 
 	local surface = game.get_surface(1)
 	local target_position = {0, 0}
-	local character = player.character
-	if not (character and character.valid) then
-		player.teleport({target_position}, surface)
-	else
-		local target
-		local vehicle = player.vehicle
-		local target_name
-		if vehicle and not vehicle.train and vehicle.get_driver() == character and vehicle.get_passenger() == nil then
-			target = vehicle
-			target_name = vehicle.name
-		else
-			target = player
-			target_name = character.name
-		end
-		local radius = 200
-		local non_colliding_position = surface.find_non_colliding_position(target_name, target_position, radius, 1)
+	teleport_safely(player, surface, target_position)
+end)
 
-		if non_colliding_position then
-			target.teleport(non_colliding_position, surface)
-		else
-			player.print("It's not possible to teleport you because there's not enough space for your character")
-		end
+commands.add_command("tp", {"BiterCraft-commands.tp"}, function(cmd)
+	if cmd.player_index == 0 then -- server
+		return
 	end
+
+	local player = game.get_player(cmd.player_index)
+	if not (player and player.valid) then return end
+
+	if cmd.parameter == nil then
+		player.print({"BiterCraft-commands.tp"}, YELLOW_COLOR)
+		return
+	end
+
+	local parameter = trim(cmd.parameter)
+	if #parameter == 0 then
+		player.print({"BiterCraft-commands.tp"}, YELLOW_COLOR)
+		return
+	end
+
+	local target_player = game.get_player(cmd.player_index)
+	if not (target_player and target_player.valid and player.connected) then return end
+	if target_player == player then return end
+
+	local surface = game.get_surface(1)
+	teleport_safely(player, surface, target_player.position)
 end)
 
 
@@ -910,9 +1014,17 @@ function update_global_data()
 	mod_data.last_round_tick = mod_data.last_round_tick or game.tick
 	mod_data.spawn_per_wave = mod_data.spawn_per_wave or 1
 	mod_data.generate_new_round_tick = mod_data.generate_new_round_tick
+	mod_data.init_players = mod_data.init_players or {}
 	mod_data.is_double_wave_on = mod_data.is_double_wave_on or false
 
 	link_data()
+
+	for _, player_index in pairs(mod_data.init_players) do
+		local player = game.get_player(player_index)
+		if not (player and player.valid) then
+			mod_data.init_players[player_index] = nil
+		end
+	end
 end
 
 
@@ -924,6 +1036,7 @@ end
 M.add_remote_interface = add_remote_interface
 
 M.on_init = function()
+	game.forces.player.friendly_fire = false
 	update_global_data()
 	add_event_filters()
 end
@@ -947,6 +1060,7 @@ M.events = {
 	[defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,
 	[defines.events.on_player_joined_game] = on_player_joined_game,
 	[defines.events.on_player_created] = on_player_created,
+	[defines.events.on_player_created] = on_player_removed,
 	[defines.events.on_gui_click] = on_gui_click,
 	[defines.events.on_entity_destroyed] = on_entity_destroyed,
 	[defines.events.on_entity_cloned] = on_entity_cloned
