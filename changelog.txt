@@ -7,7 +7,7 @@ Date: 2022-11-14
     - Fixed resource generation of the last ore
   Changes:
     - Scans the map at start
-    - Slightly change start game balance
+    - Slightly changed start game balance
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.0
 Date: 2022-11-14
