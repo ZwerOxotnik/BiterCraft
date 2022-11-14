@@ -113,6 +113,7 @@ function research_techs()
 		"electronics",
 		"fast-inserter",
 		"automation-2",
+		"electric-energy-distribution-1",
 		"steel-processing",
 		"engine",
 		"railway",
@@ -370,6 +371,7 @@ local function generate_map_territory()
 
 	local steps = math.ceil(map_size / 2 / 32)
 	local position = {0, 0}
+	surface.set_chunk_generated_status(position, defines.chunk_generated_status.entities)
 	for i = -steps, steps do
 		position[1] = i
 		for j = -steps, steps do
@@ -437,6 +439,10 @@ local function set_game_rules_by_settings()
 		make_defend_lines()
 	end
 
+	local surface = game.get_surface(1)
+	local player_force = game.forces.player
+	player_force.chart_all(surface)
+
 	mod_data.is_settings_set = true
 end
 
@@ -452,15 +458,17 @@ local function make_defend_target()
 
 	local turret_name = "gun-turret"
 	if game.entity_prototypes[turret_name] then
-		local turret = surface.create_entity{
-			name = turret_name, force = "player",
-			position = {15, 0}
-		}
+		for i = 1, 5 do
+			local turret = surface.create_entity{
+				name = turret_name, force = "player",
+				position = {15, -5 + i * 2}
+			}
 
-		local ammo_name = "firearm-magazine"
-		if game.item_prototypes[ammo_name] then
-			local stack = {name = ammo_name, count = 200}
-			turret.insert(stack)
+			local ammo_name = "firearm-magazine"
+			if game.item_prototypes[ammo_name] then
+				local stack = {name = ammo_name, count = 200}
+				turret.insert(stack)
+			end
 		end
 	end
 
@@ -472,8 +480,8 @@ local function make_defend_target()
 		entity.minable = false
 		entity.operable = false
 		entity.destructible = true
-		entity.power_production = 1000
-		entity.electric_buffer_size = 500
+		entity.power_production = 5000
+		entity.electric_buffer_size = 5000
 		entity.power_usage = 0
 	end
 
@@ -481,6 +489,13 @@ local function make_defend_target()
 		entity = surface.create_entity{
 			name = "substation", force = "player",
 			position = {-18, 0}
+		}
+	end
+
+	if game.entity_prototypes["radar"] then
+		entity = surface.create_entity{
+			name = "radar", force = "player",
+			position = {-22, 0}
 		}
 	end
 
@@ -578,7 +593,7 @@ local function create_resources()
 	end
 
 	-- Oil between ore patches
-	start_x = -map_size / 2 + 200 + 65
+	start_x = -map_size / 2 + 100 + 65
 	resource_data.name = "crude-oil"
 	for _ = 1, resource_count - 1 do
 		start_x = start_x + 100
@@ -591,24 +606,24 @@ local function create_resources()
 	end
 
 	-- Copy and paste ores ad oil
-	start_x = -map_size / 2 + 200
+	start_x = -map_size / 2 + 100
 	start_y = -100
 
 	source_left_top[1] = start_x
 	source_left_top[2] = start_y
-	source_right_bottom[1] = start_x + (100 * resource_count)
+	source_right_bottom[1] = start_x + 100 + (100 * resource_count)
 	source_right_bottom[2] = start_y + 90
 
 	start_y = -start_y
 	destination_left_top[1] = start_x
 	destination_left_top[2] = start_y
-	destination_right_bottom[1] = start_x + (100 * resource_count)
+	destination_right_bottom[1] = start_x +  100 + (100 * resource_count)
 	destination_right_bottom[2] = start_y + 90
 	clone_area(clone_data)
 
 	source_left_top[1] = start_x
 	source_left_top[2] = -start_y
-	source_right_bottom[1] = start_x + (100 * resource_count)
+	source_right_bottom[1] = start_x +  100 + (100 * resource_count)
 	source_right_bottom[2] = start_y + 90
 	while true do
 		start_x = start_x + 100 * (resource_count + 1)
@@ -617,7 +632,7 @@ local function create_resources()
 		end
 		destination_left_top[1] = start_x
 		destination_left_top[2] = -start_y
-		destination_right_bottom[1] = start_x + (100 * resource_count)
+		destination_right_bottom[1] = start_x + 100 + (100 * resource_count)
 		destination_right_bottom[2] = start_y + 90
 		clone_area(clone_data)
 	end
@@ -759,6 +774,9 @@ local function on_game_created_from_scenario()
 			insert_start_items(player)
 		end
 	end
+
+	local player_force = game.forces.player
+	player_force.chart_all(surface)
 
 	print_time_before_wave()
 	print_defend_points()
@@ -1061,12 +1079,14 @@ end
 
 
 function update_global_data()
+	game.reset_time_played() -- is this safe?
+
 	local surface = game.get_surface(1)
 	surface.generate_with_lab_tiles = true
 
 	global.BiterCraft = global.BiterCraft or {}
 	mod_data = global.BiterCraft
-	mod_data.map_size = mod_data.map_size or 2000
+	mod_data.map_size = mod_data.map_size or 6000
 	mod_data.defend_lines_count = mod_data.defend_lines_count or 3
 	mod_data.current_wave = mod_data.current_wave or 0
 	mod_data.enemy_unit_group = mod_data.enemy_unit_group or surface.create_unit_group{position={0, 0}, force="enemy"}

@@ -1,4 +1,14 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.2.0
+Date: 2022-11-14
+  Changes:
+    - The map is 3 times bigger now (start the scenario again)
+  Bugfixes:
+    - Fixed resource generation of the last ore
+  Changes:
+    - Scans the map at start
+    - Slightly change start game balance
+---------------------------------------------------------------------------------------------------
 Version: 0.1.0
 Date: 2022-11-14
   Features:
