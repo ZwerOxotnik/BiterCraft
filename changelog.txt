@@ -1,4 +1,11 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.1.0
+Date: 2022-11-14
+  Features:
+    - Added new setting: "Unlock and research all technologies"
+  Bugfixes:
+    - Improved generation stability. There was a rare bug with incorrect tile overwriting on new rounds
+---------------------------------------------------------------------------------------------------
 Version: 0.0.9
 Date: 2022-11-14
   Changes:

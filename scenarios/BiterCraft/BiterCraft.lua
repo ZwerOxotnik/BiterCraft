@@ -72,7 +72,7 @@ local function teleport_safely(player, surface, target_position)
 			target_name = character.name
 		end
 		local radius = 200
-		local non_colliding_position = surface.find_non_colliding_position(target_name, target_position, radius, 10)
+		local non_colliding_position = surface.find_non_colliding_position(target_name, target_position, radius, 5)
 
 		if non_colliding_position then
 			target.teleport(non_colliding_position, surface)
@@ -139,7 +139,7 @@ function insert_start_items(player)
 	local car_name = "car"
 	if game.entity_prototypes[car_name] then
 		local surface = game.get_surface(1)
-		local non_colliding_position = surface.find_non_colliding_position(car_name, {0, 0}, 200, 10)
+		local non_colliding_position = surface.find_non_colliding_position(car_name, {0, 0}, 200, 5)
 		if non_colliding_position then
 			local car = surface.create_entity{
 				name = car_name, force = "player",
@@ -429,6 +429,10 @@ end
 local function set_game_rules_by_settings()
 	if mod_data.is_settings_set then return end
 
+	if mod_data.is_research_all then
+		game.forces.player.research_all_technologies()
+	end
+
 	if #mod_data.defend_points == 0 then
 		make_defend_lines()
 	end
@@ -674,6 +678,10 @@ local function create_lobby_settings_GUI(player)
 	BC_wave_bosses_flow.add(LABEL).caption = {'', "Double enemies each 10th wave", COLON}
 	BC_wave_bosses_flow.add{type = "checkbox", name = "BC_double_wave_checkbox", state = mod_data.is_double_wave_on or false}
 
+	local BC_research_all_flow = main_frame.add{type = "flow", name = "BC_research_all_flow"}
+	BC_research_all_flow.add(LABEL).caption = {'', "Unlock and research all technologies", COLON}
+	BC_research_all_flow.add{type = "checkbox", name = "BC_research_all_checkbox", state = mod_data.is_research_all or false}
+
 	-- local PvP_attacks_flow = main_frame.add{type = "flow", name = "BC_PvP_attacks_flow"}
 	-- PvP_attacks_flow.add(LABEL).caption = {'', "Players attacks", COLON}
 	-- PvP_attacks_flow.add{type = "checkbox", name = "BC_PvP_attacks_checkbox", state = false}
@@ -788,6 +796,8 @@ local GUIS = {
 
 			local double_wave_checkbox = main_frame.BC_double_wave_flow.BC_double_wave_checkbox
 			mod_data.is_double_wave_on = double_wave_checkbox.state
+			local research_all_checkbox = main_frame.BC_research_all_flow.BC_research_all_checkbox
+			mod_data.is_research_all = research_all_checkbox.state
 
 			delete_settings_gui()
 			set_game_rules_by_settings()
@@ -898,7 +908,7 @@ end
 -- TODO: Refactor
 function check_map(event)
 	if not mod_data.generate_new_round then return end
-	if event.tick + 600 < mod_data.generate_new_round_tick then return end
+	if event.tick + 900 < mod_data.generate_new_round_tick then return end
 
 	on_game_created_from_scenario()
 end
@@ -1063,6 +1073,7 @@ function update_global_data()
 	mod_data.last_wave_tick = mod_data.last_wave_tick or game.tick
 	mod_data.generate_new_round = mod_data.generate_new_round or false
 	mod_data.is_settings_set = mod_data.is_settings_set or false
+	mod_data.is_research_all = mod_data.is_research_all or false
 	mod_data.defend_points = mod_data.defend_points or {}
 	mod_data.spawn_enemy_count = mod_data.spawn_enemy_count or 0
 	mod_data.enemy_tech_lvl = mod_data.enemy_tech_lvl or 1
