@@ -1,4 +1,12 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.0.8
+Date: 2022-11-14
+  Features:
+    - Added new command: /show-wave - shows current wave
+  Changes:
+    - Changed game balance (easier to start and build and etc.)
+    - Renamed: /spawn -> /base
+---------------------------------------------------------------------------------------------------
 Version: 0.0.7
 Date: 2022-11-13
   Features:

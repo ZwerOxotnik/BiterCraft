@@ -82,6 +82,23 @@ local function teleport_safely(player, surface, target_position)
 	end
 end
 
+function apply_bonuses()
+	local player_force = game.forces.player
+	player_force.manual_mining_speed_modifier = 50
+	player_force.manual_crafting_speed_modifier = 20
+	player_force.laboratory_speed_modifier = 4
+	-- player_force.laboratory_productivity_bonus = 1
+	player_force.worker_robots_speed_modifier = 2
+	player_force.character_build_distance_bonus = 20
+	player_force.character_item_drop_distance_bonus = 2
+	player_force.character_reach_distance_bonus = 20
+	player_force.character_resource_reach_distance_bonus = 20
+	player_force.character_item_pickup_distance_bonus = 2
+	player_force.character_inventory_slots_bonus = 20
+	player_force.mining_drill_productivity_bonus = 100
+	player_force.character_health_bonus = 200
+end
+
 function insert_start_items(player)
 	local item_prototypes = game.item_prototypes
 
@@ -685,6 +702,7 @@ local function on_game_created_from_scenario()
 	generate_map_territory()
 	create_resources() -- the map shouldn't have entities
 	make_defend_target()
+	apply_bonuses()
 
 	delete_settings_gui()
 	for _, player in pairs(game.players) do
@@ -905,7 +923,7 @@ commands.add_command("wave-time", {"BiterCraft-commands.wave-time"}, function(cm
 	print_time_before_wave(player)
 end)
 
-commands.add_command("spawn", {"BiterCraft-commands.spawn"}, function(cmd)
+commands.add_command("base", {"BiterCraft-commands.base"}, function(cmd)
 	if cmd.player_index == 0 then -- server
 		return
 	end
@@ -916,6 +934,18 @@ commands.add_command("spawn", {"BiterCraft-commands.spawn"}, function(cmd)
 	local surface = game.get_surface(1)
 	local target_position = {0, 0}
 	teleport_safely(player, surface, target_position)
+end)
+
+commands.add_command("show-wave", {"BiterCraft-commands.show-wave"}, function(cmd)
+	if cmd.player_index == 0 then -- server
+		print(mod_data.current_wave)
+		return
+	end
+
+	local player = game.get_player(cmd.player_index)
+	if not (player and player.valid) then return end
+
+	player.print(mod_data.current_wave, YELLOW_COLOR)
 end)
 
 commands.add_command("tp", {"BiterCraft-commands.tp"}, function(cmd)
