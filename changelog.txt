@@ -1,4 +1,13 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.0.9
+Date: 2022-11-14
+  Changes:
+    - Added landfill to player start items
+    - Some technologies are researched by default
+    - One car per player at start
+  Bugfixes:
+    - Fixed repeated start items in some cases
+---------------------------------------------------------------------------------------------------
 Version: 0.0.8
 Date: 2022-11-14
   Features:

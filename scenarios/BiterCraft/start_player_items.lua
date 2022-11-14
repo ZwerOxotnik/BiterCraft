@@ -4,6 +4,7 @@ return {
 	{name = "flamethrower", count = 1},
 	{name = "flamethrower-ammo", count = 50},
 	{name = "firearm-magazine", count = 400},
+	{name = "landfill", count = 50},
 	{name = "gun-turret", count = 10},
 	{name = "repair-pack", count = 100},
 	{name = "shotgun-shell", count = 50},

@@ -99,7 +99,41 @@ function apply_bonuses()
 	player_force.character_health_bonus = 200
 end
 
+function research_techs()
+	local technologies = game.forces.player.technologies
+
+	local tech_list = {
+		"military",
+		"logistics",
+		"stone-wall",
+		"gate",
+		"gun-turret",
+		"optics",
+		"automation",
+		"electronics",
+		"fast-inserter",
+		"automation-2",
+		"steel-processing",
+		"engine",
+		"railway",
+		"automated-rail-signals",
+		"automated-rail-transportation",
+		"steel-axe",
+		"rail-signals",
+		"logistic-science-pack",
+		"circuit-network"
+	}
+	for _, tech_name in pairs(tech_list) do
+		local tech = technologies[tech_name]
+		if tech then
+			tech.researched = true
+		end
+	end
+end
+
 function insert_start_items(player)
+	mod_data.init_players[player.index] = game.tick
+
 	local item_prototypes = game.item_prototypes
 
 	local car_name = "car"
@@ -118,7 +152,7 @@ function insert_start_items(player)
 				local stack = {name = fuel_name, count = 600}
 				car.insert(stack)
 			end
-
+		else
 			if game.item_prototypes[car_name] then
 				local stack = {name = car_name, count = 1}
 				player.insert(stack)
@@ -669,7 +703,6 @@ local function on_player_joined_game(event)
 		player.print({"BiterCraft.generating_new_round"}, YELLOW_COLOR)
 	elseif mod_data.init_players[player_index] == nil then
 		insert_start_items(player)
-		mod_data.init_players[player_index] = game.tick
 	end
 	print_defend_points(player)
 	print_time_before_wave(player)
@@ -703,6 +736,7 @@ local function on_game_created_from_scenario()
 	create_resources() -- the map shouldn't have entities
 	make_defend_target()
 	apply_bonuses()
+	research_techs()
 
 	delete_settings_gui()
 	for _, player in pairs(game.players) do
