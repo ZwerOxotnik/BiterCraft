@@ -9,6 +9,7 @@ local M = {}
 
 --#region Global game data
 local mod_data
+local player_HUD_data
 --#endregion
 
 
@@ -38,6 +39,35 @@ local spitter_upgrades = {
 
 
 --#region Util
+
+---Format: mm:ss
+---@return string
+local function get_wave_time()
+	local next_wave_tick = mod_data.last_wave_tick + (60 * 60 * 5)
+	local tick = next_wave_tick - game.tick
+
+	local mins = floor(tick / (60 * 60))
+	local seconds = floor((tick - (mins * 60 * 60)) / 60)
+	-- mins = mins - seconds * 60
+
+	if seconds < 9 then
+		if seconds == 0 then
+			seconds = "00"
+		else
+			seconds = "0" .. seconds
+		end
+	end
+
+	if mins < 9 then
+		if mins == 0 then
+			mins = "00"
+		else
+			mins = "0" .. mins
+		end
+	end
+
+	return mins .. ":" .. seconds
+end
 
 ---@param s string
 local function trim(s)
@@ -132,6 +162,20 @@ function research_techs()
 	end
 end
 
+function update_player_wave_HUD()
+	local next_wave = tostring(mod_data.current_wave + 1)
+	for _, HUDs in pairs(player_HUD_data) do
+		HUDs[1].caption = next_wave
+	end
+end
+
+function update_player_time_HUD(event)
+	local time = get_wave_time()
+	for _, HUDs in pairs(player_HUD_data) do
+		HUDs[2].caption = time
+	end
+end
+
 function insert_start_items(player)
 	mod_data.init_players[player.index] = game.tick
 
@@ -164,34 +208,6 @@ function insert_start_items(player)
 	for _, item_data in pairs(START_PLAYER_ITEMS) do
 		if item_prototypes[item_data.name] then
 			player.insert(item_data)
-		end
-	end
-end
-
--- TODO: Refactor?
-function print_time_before_wave(player, is_server)
-	local next_wave_tick = mod_data.last_wave_tick + (60 * 60 * 5)
-	local ticks_before_wave = next_wave_tick - game.tick
-	if ticks_before_wave <= 0 then return end
-
-	local minutes = floor(ticks_before_wave / min(3600, 3600 * game.speed))
-	local message
-	if minutes > 0 then
-		message = {"BiterCraft.minutes_before_new_wave", minutes}
-	else
-		local seconds = floor(ticks_before_wave / min(60, 60 * game.speed))
-		message = {"BiterCraft.seconds_before_new_wave", seconds}
-	end
-
-	if player then
-		player.print(message, YELLOW_COLOR)
-	elseif is_server then
-		log(message, YELLOW_COLOR)
-	else
-		for _, _player in pairs(game.connected_players) do
-			if _player.valid then
-				_player.print(message, YELLOW_COLOR)
-			end
 		end
 	end
 end
@@ -653,6 +669,34 @@ end
 
 --#region Functions of events
 
+function create_info_HUD(player)
+	local screen = player.gui.screen
+	local prev_location
+	if screen.BC_info_UI_frame then
+		prev_location = screen.BC_info_UI_frame.location
+		screen.BC_info_UI_frame.destroy()
+	end
+
+	local main_frame = screen.add{type = "frame", name = "BC_info_HUD_frame", direction = "horizontal"}
+	main_frame.location = prev_location or {x = 40, y = 40}
+	-- main_frame.style.horizontal_spacing = 0 -- it doesn't work
+	main_frame.style.padding = 0
+	local draggable_space = main_frame.add({type = "empty-widget", style = "draggable_space"})
+	draggable_space.style.width = 10
+	draggable_space.style.height = 20
+	draggable_space.style.margin = 0
+	draggable_space.drag_target = main_frame
+
+	main_frame.add(LABEL).caption = {'', {"BiterCraft-HUD.wave"}, COLON}
+	local wave_label = main_frame.add(LABEL)
+	wave_label.caption = tostring(mod_data.current_wave + 1)
+	main_frame.add(LABEL).caption = {'', {"BiterCraft-HUD.in"}, COLON}
+	local time_label = main_frame.add(LABEL)
+	time_label.caption = get_wave_time()
+
+	player_HUD_data[player.index] = {wave_label, time_label}
+end
+
 local function create_lobby_settings_GUI(player)
 	local center = player.gui.center
 	if center.BC_lobby_settings_frame then
@@ -716,7 +760,7 @@ end
 
 local function on_player_joined_game(event)
 	local player_index = event.player_index
-	local player = game.get_player(event.player_index)
+	local player = game.get_player(player_index)
 	if not (player and player.valid) then return end
 
 	if mod_data.is_settings_set == false and player.admin then
@@ -728,19 +772,31 @@ local function on_player_joined_game(event)
 	elseif mod_data.init_players[player_index] == nil then
 		insert_start_items(player)
 	end
+
+	create_info_HUD(player)
 	print_defend_points(player)
-	print_time_before_wave(player)
+end
+
+local function on_player_left_game(event)
+	local player_index = event.player_index
+	local player = game.get_player(player_index)
+	if not (player and player.valid) then return end
+
+	player_HUD_data[player_index] = nil
 end
 
 local function on_player_created(event)
-	local player = game.get_player(event.player_index)
+	local player_index = event.player_index
+	local player = game.get_player(player_index)
 	if not (player and player.valid) then return end
 
 	player.print({"BiterCraft.wip_message"}, YELLOW_COLOR)
 end
 
 local function on_player_removed(event)
-	mod_data.init_players[event.player_index] = nil
+	local player_index = event.player_index
+	mod_data.init_players[player_index] = nil
+	player_HUD_data[player_index] = nil
 end
 
 local function on_game_created_from_scenario()
@@ -780,7 +836,7 @@ local function on_game_created_from_scenario()
 	local player_force = game.forces.player
 	player_force.chart_all(surface)
 
-	print_time_before_wave()
+	update_player_wave_HUD()
 	print_defend_points()
 end
 
@@ -922,6 +978,7 @@ do
 		enemy_unit_group.set_command(command_data)
 
 		game.print({"BiterCraft.new_wave"}, YELLOW_COLOR)
+		update_player_wave_HUD()
 	end
 end
 
@@ -975,17 +1032,6 @@ commands.add_command("restart-round", {"BiterCraft-commands.restart-round"}, fun
 	end
 
 	new_round()
-end)
-
-commands.add_command("wave-time", {"BiterCraft-commands.wave-time"}, function(cmd)
-	if cmd.player_index == 0 then -- server
-		print_time_before_wave(nil, true)
-		return
-	end
-
-	local player = game.get_player(cmd.player_index)
-	if not (player and player.valid) then return end
-	print_time_before_wave(player)
 end)
 
 commands.add_command("upgrade-biters", {"BiterCraft-commands.upgrade-biters"}, function(cmd)
@@ -1058,6 +1104,8 @@ end)
 
 
 function new_round()
+	game.reset_time_played() -- is this safe?
+
 	local surface = game.get_surface(1)
 	surface.clear(true) --ignores characters
 
@@ -1094,12 +1142,11 @@ end
 
 function link_data()
 	mod_data = global.BiterCraft
+	player_HUD_data = mod_data.player_HUD_data
 end
 
 
 function update_global_data()
-	game.reset_time_played() -- is this safe?
-
 	local surface = game.get_surface(1)
 	surface.generate_with_lab_tiles = true
 
@@ -1114,6 +1161,7 @@ function update_global_data()
 	mod_data.is_settings_set = mod_data.is_settings_set or false
 	mod_data.is_research_all = mod_data.is_research_all or false
 	mod_data.defend_points = mod_data.defend_points or {}
+	mod_data.player_HUD_data = mod_data.player_HUD_data or {}
 	mod_data.spawn_enemy_count = mod_data.spawn_enemy_count or 0
 	mod_data.enemy_tech_lvl = mod_data.enemy_tech_lvl or 1
 	mod_data.last_round_tick = mod_data.last_round_tick or game.tick
@@ -1125,10 +1173,17 @@ function update_global_data()
 
 	link_data()
 
+	-- Validate data
 	for _, player_index in pairs(mod_data.init_players) do
 		local player = game.get_player(player_index)
 		if not (player and player.valid) then
 			mod_data.init_players[player_index] = nil
+		end
+	end
+	for _, player_index in pairs(mod_data.player_HUD_data) do
+		local player = game.get_player(player_index)
+		if not (player and player.valid and player.connected) then
+			player_HUD_data[player_index] = nil
 		end
 	end
 end
@@ -1165,15 +1220,17 @@ end
 M.events = {
 	[defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,
 	[defines.events.on_player_joined_game] = on_player_joined_game,
+	[defines.events.on_player_left_game] = on_player_left_game,
 	[defines.events.on_player_created] = on_player_created,
-	[defines.events.on_player_created] = on_player_removed,
+	[defines.events.on_player_removed] = on_player_removed,
 	[defines.events.on_gui_click] = on_gui_click,
 	[defines.events.on_entity_destroyed] = on_entity_destroyed,
 	[defines.events.on_entity_cloned] = on_entity_cloned
 }
 
 M.on_nth_tick = {
-	[60 * 60 * 1] = check_is_settings_set,
+	[60] = update_player_time_HUD,
+	[60 * 60] = check_is_settings_set,
 	[60 * 60 * 5] = start_new_wave,
 	[60 * 60 * 10] = function(event)
 		if event.tick < mod_data.last_wave_tick + (60 * 60 * 5) then
@@ -1194,9 +1251,6 @@ M.on_nth_tick = {
 			return
 		end
 		upgrade_biters()
-	end,
-	[60 * 60] = function()
-		print_time_before_wave()
 	end,
 	[300] = check_map
 }

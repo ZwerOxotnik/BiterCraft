@@ -1,4 +1,13 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.3.0
+Date: 2022-11-15
+  Features:
+    - Added HUD to show next wave and time untill the wave
+  Bugfixes:
+    - Improved data stability for removed players
+  Changes:
+    - Removed command: /show-wave
+---------------------------------------------------------------------------------------------------
 Version: 0.2.1
 Date: 2022-11-15
   Features:
