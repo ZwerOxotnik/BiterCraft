@@ -17,7 +17,6 @@ local START_PLAYER_ITEMS = require("start_player_items")
 local START_BASE_ITEMS = require("start_base_items")
 local random = math.random
 local floor = math.floor
-local min = math.min
 local EMPTY_WIDGET = {type = "empty-widget"}
 local COLON = {"colon"}
 local LABEL = {type = "label"}
@@ -456,6 +455,7 @@ local function set_game_rules_by_settings()
 		make_defend_lines()
 	end
 
+	game.difficulty_settings.technology_price_multiplier = mod_data.tech_price_multiplier
 	local surface = game.get_surface(1)
 	local player_force = game.forces.player
 	player_force.chart_all(surface)
@@ -715,9 +715,11 @@ local function create_lobby_settings_GUI(player)
 	-- content2.add(LABEL).caption = {'', "Biter price multiplier", COLON}
 	-- content2.add{type = "textfield", name = "BC_biter_price_mult_textfield", text = 1}.style.maximal_width = 70
 	-- textfield_content.add(LABEL).caption = "Biter difficulty:"
-	-- textfield_content.add{type = "textfield", name = "BC_biter_difficulty_textfield", text = 30, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+	-- textfield_content.add{type = "textfield", name = "BC_biter_difficulty_textfield", text = 30, numeric = true, allow_decimal = false, allow_negative = false}.style.maximal_width = 70
 	textfield_content.add(LABEL).caption = {'', "Defend lines", COLON}
-	textfield_content.add{type = "textfield", name = "BC_defend_lines_textfield", text = mod_data.defend_lines_count or 3, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+	textfield_content.add{type = "textfield", name = "BC_defend_lines_textfield", text = mod_data.defend_lines_count or 3, numeric = true, allow_decimal = false, allow_negative = false}.style.maximal_width = 70
+	textfield_content.add(LABEL).caption = {'', "Technology price multiplier", COLON}
+	textfield_content.add{type = "textfield", name = "BC_tech_price_multiplier_textfield", text = mod_data.technology_price_multiplier or 1, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
 	-- content2.add(LABEL).caption = "Map size:"
 	-- content2.add{type = "textfield", name = "BC_map_size_textfield", text = 30000}.style.maximal_width = 70
 
@@ -860,15 +862,25 @@ local GUIS = {
 			local main_frame = player.gui.center.BC_lobby_settings_frame
 			local textfield_content = main_frame.BC_textfield_content
 			local defend_lines_textfield = textfield_content.BC_defend_lines_textfield
+			local tech_price_multiplier_textfield = textfield_content.BC_tech_price_multiplier_textfield
 
-			local defend_lines_count = tonumber(defend_lines_textfield.text)
+			local defend_lines_count = tonumber(defend_lines_textfield.text) or 1
 			if defend_lines_count < 1 then
 				defend_lines_count = 1
-			end
-			if defend_lines_count > 10 then
+			elseif defend_lines_count > 10 then
 				defend_lines_count = 10
 			end
 			mod_data.defend_lines_count = defend_lines_count
+
+			local tech_price_multiplier = tonumber(tech_price_multiplier_textfield.text) or 1
+			if tech_price_multiplier == 0 then
+			tech_price_multiplier = 1
+			elseif tech_price_multiplier < 0.001 then
+				tech_price_multiplier = 0.001
+			elseif tech_price_multiplier > 1000 then
+				tech_price_multiplier = 1000
+			end
+			mod_data.tech_price_multiplier = tech_price_multiplier
 
 			local double_wave_checkbox = main_frame.BC_double_wave_flow.BC_double_wave_checkbox
 			mod_data.is_double_wave_on = double_wave_checkbox.state
@@ -878,6 +890,10 @@ local GUIS = {
 			delete_settings_gui()
 			set_game_rules_by_settings()
 		else
+			local frame = player.gui.center.BC_lobby_settings_frame
+			if frame and frame.valid then
+				frame.destroy()
+			end
 		end
 	end
 }
@@ -1155,6 +1171,7 @@ function update_global_data()
 	mod_data.map_size = mod_data.map_size or 6000
 	mod_data.defend_lines_count = mod_data.defend_lines_count or 3
 	mod_data.current_wave = mod_data.current_wave or 0
+	mod_data.tech_price_multiplier = mod_data.tech_price_multiplier or 1
 	mod_data.enemy_unit_group = mod_data.enemy_unit_group or surface.create_unit_group{position={0, 0}, force="enemy"}
 	mod_data.last_wave_tick = mod_data.last_wave_tick or game.tick
 	mod_data.generate_new_round = mod_data.generate_new_round or false
