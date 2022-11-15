@@ -304,6 +304,7 @@ do
 			create_entity(biter_data)
 		end
 
+		mod_data.last_upgrade_tick = game.tick
 		game.print({"BiterCraft.biters_evolved"}, YELLOW_COLOR)
 	end
 end
@@ -747,10 +748,11 @@ local function on_game_created_from_scenario()
 
 	mod_data.init_players = {}
 	mod_data.defend_points = {}
+	mod_data.last_upgrade_tick = game.tick
+	mod_data.last_round_tick = game.tick
 	mod_data.last_wave_tick = game.tick
 	mod_data.is_settings_set = false -- TODO: change it!
 	mod_data.generate_new_round = false
-	mod_data.last_round_tick = game.tick
 	mod_data.spawn_enemy_count = 0
 	mod_data.enemy_tech_lvl = 1
 	mod_data.enemy_unit_group = surface.create_unit_group{position={0, 0}, force="enemy"}
@@ -971,6 +973,7 @@ commands.add_command("restart-round", {"BiterCraft-commands.restart-round"}, fun
 		player.print({"command-output.parameters-require-admin"}, {1, 0, 0})
 		return
 	end
+
 	new_round()
 end)
 
@@ -983,6 +986,22 @@ commands.add_command("wave-time", {"BiterCraft-commands.wave-time"}, function(cm
 	local player = game.get_player(cmd.player_index)
 	if not (player and player.valid) then return end
 	print_time_before_wave(player)
+end)
+
+commands.add_command("upgrade-biters", {"BiterCraft-commands.upgrade-biters"}, function(cmd)
+	if cmd.player_index == 0 then -- server
+		upgrade_biters()
+		return
+	end
+
+	local player = game.get_player(cmd.player_index)
+	if not (player and player.valid) then return end
+	if player.admin == false then
+		player.print({"command-output.parameters-require-admin"}, {1, 0, 0})
+		return
+	end
+
+	upgrade_biters()
 end)
 
 commands.add_command("base", {"BiterCraft-commands.base"}, function(cmd)
@@ -1098,6 +1117,7 @@ function update_global_data()
 	mod_data.spawn_enemy_count = mod_data.spawn_enemy_count or 0
 	mod_data.enemy_tech_lvl = mod_data.enemy_tech_lvl or 1
 	mod_data.last_round_tick = mod_data.last_round_tick or game.tick
+	mod_data.last_upgrade_tick = mod_data.last_upgrade_tick or game.tick
 	mod_data.spawn_per_wave = mod_data.spawn_per_wave or 1
 	mod_data.generate_new_round_tick = mod_data.generate_new_round_tick
 	mod_data.init_players = mod_data.init_players or {}
@@ -1162,17 +1182,17 @@ M.on_nth_tick = {
 		if mod_data.generate_new_round then return end
 		mod_data.spawn_per_wave = mod_data.spawn_per_wave + 1
 	end,
-	[60 * 60 * 30] = function(event)
+	[60 * 60 * 4] = function(event)
+		if mod_data.generate_new_round then return end
 		if mod_data.enemy_tech_lvl >= #biter_upgrades then return end
-		if event.tick < mod_data.last_round_tick + (60 * 60 * 60 * 2) then
-			if event.tick > mod_data.last_round_tick + (60 * 60 * 60 * 1) then
+		if event.tick < mod_data.last_upgrade_tick + (60 * 60 * 60 * 2) then
+			if event.tick > mod_data.last_upgrade_tick + (60 * 60 * 60 * 1) then
 				if mod_data.enemy_tech_lvl == 1 then
 					upgrade_biters()
 				end
 			end
 			return
 		end
-		if mod_data.generate_new_round then return end
 		upgrade_biters()
 	end,
 	[60 * 60] = function()
