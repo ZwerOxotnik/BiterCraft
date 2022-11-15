@@ -4,7 +4,7 @@ Date: 2022-11-15
   Features:
     - Added new command: /upgrade-biters
   Bugfixes:
-    - Upgrades biters by time more properly now
+    - Upgrading of biters by time works more properly now
 ---------------------------------------------------------------------------------------------------
 Version: 0.2.0
 Date: 2022-11-14
