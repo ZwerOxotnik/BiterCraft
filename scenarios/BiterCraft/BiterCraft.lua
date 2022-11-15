@@ -687,10 +687,10 @@ function create_info_HUD(player)
 	draggable_space.style.margin = 0
 	draggable_space.drag_target = main_frame
 
-	main_frame.add(LABEL).caption = {'', {"BiterCraft-HUD.wave"}, COLON}
+	main_frame.add(LABEL).caption = {"BiterCraft-HUD.wave"}
 	local wave_label = main_frame.add(LABEL)
 	wave_label.caption = tostring(mod_data.current_wave + 1)
-	main_frame.add(LABEL).caption = {'', {"BiterCraft-HUD.in"}, COLON}
+	main_frame.add(LABEL).caption = {"BiterCraft-HUD.in"}
 	local time_label = main_frame.add(LABEL)
 	time_label.caption = get_wave_time()
 
