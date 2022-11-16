@@ -215,7 +215,7 @@ function insert_start_items(player)
 	local car_name = get_first_valid_prototype(game.entity_prototypes, cars)
 	local car
 	if car_name then
-		local non_colliding_position = surface.find_non_colliding_position(car_name, {0, 0}, 200, 5)
+		local non_colliding_position = surface.find_non_colliding_position(car_name, {-10, 0}, 200, 5)
 		if non_colliding_position then
 			car = surface.create_entity{
 				name = car_name, force = "player",
@@ -325,30 +325,14 @@ do
 		local create_entity = surface.create_entity
 		local enemy_tech_lvl = mod_data.enemy_tech_lvl
 
-		if enemy_tech_lvl == 0 then
-			biter_data.name = "small-biter"
-		elseif enemy_tech_lvl == 1 then
-			biter_data.name = "medium-biter"
-		elseif enemy_tech_lvl == 2 then
-			biter_data.name = "big-biter"
-		else
-			biter_data.name = "behemoth-biter"
-		end
+		biter_data.name = biter_upgrades[enemy_tech_lvl]
 		for _ = 1, spawn_count do
 			biter_pos[1] = random(25000, 25050)
 			biter_pos[2] = random(10, 50)
 			create_entity(biter_data)
 		end
 
-		if enemy_tech_lvl == 0 then
-			biter_data.name = "small-spitter"
-		elseif enemy_tech_lvl == 1 then
-			biter_data.name = "medium-spitter"
-		elseif enemy_tech_lvl == 2 then
-			biter_data.name = "big-spitter"
-		else
-			biter_data.name = "behemoth-spitter"
-		end
+		biter_data.name = spitter_upgrades[enemy_tech_lvl]
 		for _ = 1, spawn_count do
 			biter_pos[1] = random(25000, 25050)
 			biter_pos[2] = random(10, 50)
@@ -483,8 +467,14 @@ end
 local function set_game_rules_by_settings()
 	if mod_data.is_settings_set then return end
 
+	local surface = game.get_surface(1)
+
 	if mod_data.is_research_all then
 		game.forces.player.research_all_technologies()
+	end
+
+	if mod_data.is_always_day then
+		surface.always_day = mod_data.is_always_day
 	end
 
 	if #mod_data.defend_points == 0 then
@@ -492,7 +482,6 @@ local function set_game_rules_by_settings()
 	end
 
 	game.difficulty_settings.technology_price_multiplier = mod_data.tech_price_multiplier
-	local surface = game.get_surface(1)
 	local player_force = game.forces.player
 	player_force.chart_all(surface)
 
@@ -772,13 +761,17 @@ local function create_lobby_settings_GUI(player)
 	-- BC_wave_bosses_flow.add(LABEL).caption = {'', "Wave bosses", COLON}
 	-- BC_wave_bosses_flow.add{type = "checkbox", name = "BC_wave_bosses_checkbox", state = false}
 
+	local BC_research_all_flow = main_frame.add{type = "flow", name = "BC_research_all_flow"}
+	BC_research_all_flow.add(LABEL).caption = {'', "Unlock and research all technologies", COLON}
+	BC_research_all_flow.add{type = "checkbox", name = "BC_research_all_checkbox", state = mod_data.is_research_all or false}
+
 	local BC_wave_bosses_flow = main_frame.add{type = "flow", name = "BC_double_wave_flow"}
 	BC_wave_bosses_flow.add(LABEL).caption = {'', "Double enemies each 10th wave", COLON}
 	BC_wave_bosses_flow.add{type = "checkbox", name = "BC_double_wave_checkbox", state = mod_data.is_double_wave_on or false}
 
-	local BC_research_all_flow = main_frame.add{type = "flow", name = "BC_research_all_flow"}
-	BC_research_all_flow.add(LABEL).caption = {'', "Unlock and research all technologies", COLON}
-	BC_research_all_flow.add{type = "checkbox", name = "BC_research_all_checkbox", state = mod_data.is_research_all or false}
+	local BC_is_always_day_flow = main_frame.add{type = "flow", name = "BC_is_always_day_flow"}
+	BC_is_always_day_flow.add(LABEL).caption = {'', "Is always day", COLON}
+	BC_is_always_day_flow.add{type = "checkbox", name = "BC_is_always_day_checkbox", state = mod_data.is_always_day or false}
 
 	-- local PvP_attacks_flow = main_frame.add{type = "flow", name = "BC_PvP_attacks_flow"}
 	-- PvP_attacks_flow.add(LABEL).caption = {'', "Players attacks", COLON}
@@ -926,6 +919,8 @@ local GUIS = {
 			mod_data.is_double_wave_on = double_wave_checkbox.state
 			local research_all_checkbox = main_frame.BC_research_all_flow.BC_research_all_checkbox
 			mod_data.is_research_all = research_all_checkbox.state
+			local is_always_day_checkbox = main_frame.BC_is_always_day_flow.BC_is_always_day_checkbox
+			mod_data.is_always_day = is_always_day_checkbox.state
 
 			delete_settings_gui()
 			set_game_rules_by_settings()
@@ -1217,6 +1212,7 @@ function update_global_data()
 	mod_data.generate_new_round = mod_data.generate_new_round or false
 	mod_data.is_settings_set = mod_data.is_settings_set or false
 	mod_data.is_research_all = mod_data.is_research_all or false
+	mod_data.is_always_day = mod_data.is_always_day or false
 	mod_data.defend_points = mod_data.defend_points or {}
 	mod_data.player_HUD_data = mod_data.player_HUD_data or {}
 	mod_data.spawn_enemy_count = mod_data.spawn_enemy_count or 0
