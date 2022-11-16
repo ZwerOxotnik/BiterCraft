@@ -16,6 +16,7 @@ local player_HUD_data
 local START_PLAYER_ITEMS = require("start_player_items")
 local START_BASE_ITEMS = require("start_base_items")
 local random = math.random
+local tremove = table.remove
 local floor = math.floor
 local EMPTY_WIDGET = {type = "empty-widget"}
 local COLON = {"colon"}
@@ -34,6 +35,12 @@ local spitter_upgrades = {
 	"medium-spitter",
 	"big-spitter",
 	"behemoth-spitter"
+}
+local worm_upgrades = {
+	"small-worm-turret",
+	"medium-worm-turret",
+	"big-worm-turret",
+	"behemoth-worm-turret"
 }
 
 
@@ -56,21 +63,20 @@ local function get_wave_time()
 
 	local mins = floor(tick / (60 * 60))
 	local seconds = floor((tick - (mins * 60 * 60)) / 60)
-	-- mins = mins - seconds * 60
-
-	if seconds < 9 then
-		if seconds == 0 then
-			seconds = "00"
-		else
-			seconds = "0" .. seconds
-		end
-	end
 
 	if mins < 9 then
 		if mins == 0 then
 			mins = "00"
 		else
 			mins = "0" .. mins
+		end
+	end
+
+	if seconds < 9 then
+		if seconds == 0 then
+			seconds = "00"
+		else
+			seconds = "0" .. seconds
 		end
 	end
 
@@ -140,7 +146,6 @@ function apply_bonuses()
 	player_force.manual_mining_speed_modifier = 50
 	player_force.manual_crafting_speed_modifier = 20
 	player_force.laboratory_speed_modifier = 4
-	-- player_force.laboratory_productivity_bonus = 1
 	player_force.worker_robots_speed_modifier = 2
 	player_force.character_build_distance_bonus = 20
 	player_force.character_item_drop_distance_bonus = 2
@@ -736,6 +741,9 @@ local function create_lobby_settings_GUI(player)
 	-- modes_flow.add{type = "drop-down", items = {"PvP", "PvE", "PvPvE"}, selected_index = is_multiplayer and 3 or 2}
 
 
+	local checkbox
+	local label
+
 	local textfield_content = main_frame.add{type = "table", name = "BC_textfield_content", column_count = 2}
 	-- content2.add(LABEL).caption = {'', "Biter price multiplier", COLON}
 	-- content2.add{type = "textfield", name = "BC_biter_price_mult_textfield", text = 1}.style.maximal_width = 70
@@ -766,8 +774,15 @@ local function create_lobby_settings_GUI(player)
 	BC_research_all_flow.add{type = "checkbox", name = "BC_research_all_checkbox", state = mod_data.is_research_all or false}
 
 	local BC_wave_bosses_flow = main_frame.add{type = "flow", name = "BC_double_wave_flow"}
-	BC_wave_bosses_flow.add(LABEL).caption = {'', "Double enemies each 10th wave", COLON}
+	BC_wave_bosses_flow.add(LABEL).caption = {'', {"BiterCraft-settings.double_wave"}, COLON}
 	BC_wave_bosses_flow.add{type = "checkbox", name = "BC_double_wave_checkbox", state = mod_data.is_double_wave_on or false}
+
+	local BC_infection_mode_flow = main_frame.add{type = "flow", name = "BC_infection_mode_flow"}
+	label = BC_infection_mode_flow.add(LABEL)
+	label.caption = {'', "[img=info] ", {"BiterCraft-settings.infection_mode"}, COLON}
+	label.tooltip = {"BiterCraft-settings-tooltips.infection_mode"}
+	checkbox = BC_infection_mode_flow.add{type = "checkbox", name = "BC_infection_mode_checkbox", state = mod_data.infection_mode or false}
+	checkbox.tooltip = {"BiterCraft-settings-tooltips.infection_mode"}
 
 	local BC_is_always_day_flow = main_frame.add{type = "flow", name = "BC_is_always_day_flow"}
 	BC_is_always_day_flow.add(LABEL).caption = {'', "Is always day", COLON}
@@ -837,6 +852,7 @@ end
 local function on_game_created_from_scenario()
 	local surface = game.get_surface(1)
 
+	mod_data.infection_sources = {}
 	mod_data.init_players = {}
 	mod_data.defend_points = {}
 	mod_data.last_upgrade_tick = game.tick
@@ -921,6 +937,8 @@ local GUIS = {
 			mod_data.is_research_all = research_all_checkbox.state
 			local is_always_day_checkbox = main_frame.BC_is_always_day_flow.BC_is_always_day_checkbox
 			mod_data.is_always_day = is_always_day_checkbox.state
+			local infection_mode_checkbox = main_frame.BC_infection_mode_flow.BC_infection_mode_checkbox
+			mod_data.infection_mode = infection_mode_checkbox.state
 
 			delete_settings_gui()
 			set_game_rules_by_settings()
@@ -955,9 +973,49 @@ function check_is_settings_set(event)
 	set_game_rules_by_settings()
 end
 
+do
+	local worm_data = {name = "", force = "enemy", position = nil}
+	function spread_infection(event)
+		local infection_sources = mod_data.infection_sources
+		if #infection_sources == 0 then return end
+
+		local surface = game.get_surface(1)
+		local create_entity = surface.create_entity
+		local enemy_tech_lvl = mod_data.enemy_tech_lvl
+		local worm_name = worm_upgrades[enemy_tech_lvl]
+		local left_top = {0, 0}
+		local right_bottom = {0, 0}
+		local search_space = {left_top = left_top, right_bottom = right_bottom}
+		worm_data.name = worm_name
+		for i=#infection_sources, 1, -1 do
+			local entity = infection_sources[i]
+			if entity.valid then
+				local pos = entity.position
+				local x = pos.x
+				local y = pos.y
+				left_top[1] = x - 20
+				left_top[2] = y - 20
+				right_bottom[1] = x - 3
+				right_bottom[2] = y + 20
+				local non_colliding_position = surface.find_non_colliding_position_in_box(worm_name, search_space, 20, true)
+				-- local non_colliding_position = surface.find_non_colliding_position(worm_name, entity.position, 14, 14)
+				if non_colliding_position then
+					worm_data.position = non_colliding_position
+					infection_sources[#infection_sources+1] = create_entity(worm_data)
+				else
+					tremove(infection_sources, i)
+				end
+			else
+				tremove(infection_sources, i)
+			end
+		end
+	end
+end
+
 
 do
 	local length = 400
+	local h_length = length/2
 	local height = 60
 	local destination_left_top = {0, 0}
 	local destination_right_bottom = {0, 0}
@@ -982,11 +1040,11 @@ do
 		mod_data.current_wave = current_wave
 		mod_data.last_wave_tick = event.tick
 		local surface = game.get_surface(1)
-
-		-- Spawn new enemies
+		local enemy_tech_lvl = mod_data.enemy_tech_lvl
 		local create_entity = surface.create_entity
 		local spawn_per_wave = mod_data.spawn_per_wave
-		local enemy_tech_lvl = mod_data.enemy_tech_lvl
+
+		-- Spawn new enemies
 		biter_data.name = biter_upgrades[enemy_tech_lvl]
 		for _ = 1, spawn_per_wave do
 			biter_pos[1] = random(25000, 25050)
@@ -1011,11 +1069,20 @@ do
 		local h_size = floor(defend_lines_count/2)
 		local map_border = mod_data.map_size/2
 		local clone_area = surface.clone_area
+		local infection_sources = mod_data.infection_sources
+		biter_data.name = worm_upgrades[enemy_tech_lvl]
 		for i = -h_size, h_size do
+			if mod_data.infection_mode then
+				biter_pos[1] = random(map_border + length - 70, map_border + length - 60)
+				biter_pos[2] = random(h_length * i + 10, h_length * i + height - 10)
+				infection_sources[#infection_sources+1] = create_entity(biter_data)
+			end
+
 			destination_left_top[1] = map_border + length - 60
-			destination_left_top[2] = (length/2) * i + 10
+			destination_left_top[2] = h_length * i + 10
 			destination_right_bottom[1] = map_border + length - 10
-			destination_right_bottom[2] = (length/2) * i + height - 10
+			destination_right_bottom[2] = h_length * i + height - 10
+
 			if mod_data.is_double_wave_on and (current_wave % 10 == 0) then
 				clone_area(clone_data)
 				clone_area(clone_data)
@@ -1175,6 +1242,7 @@ function new_round()
 	game.print({"BiterCraft.generating_new_round"}, YELLOW_COLOR)
 
 	mod_data.defend_points = {}
+	mod_data.infection_sources = {}
 	mod_data.generate_new_round = true
 	mod_data.generate_new_round_tick = game.tick
 end
@@ -1213,6 +1281,7 @@ function update_global_data()
 	mod_data.is_settings_set = mod_data.is_settings_set or false
 	mod_data.is_research_all = mod_data.is_research_all or false
 	mod_data.is_always_day = mod_data.is_always_day or false
+	mod_data.infection_mode = mod_data.infection_mode or false
 	mod_data.defend_points = mod_data.defend_points or {}
 	mod_data.player_HUD_data = mod_data.player_HUD_data or {}
 	mod_data.spawn_enemy_count = mod_data.spawn_enemy_count or 0
@@ -1222,6 +1291,7 @@ function update_global_data()
 	mod_data.spawn_per_wave = mod_data.spawn_per_wave or 1
 	mod_data.generate_new_round_tick = mod_data.generate_new_round_tick
 	mod_data.init_players = mod_data.init_players or {}
+	mod_data.infection_sources = mod_data.infection_sources or {}
 	mod_data.is_double_wave_on = mod_data.is_double_wave_on or false
 
 	link_data()
@@ -1272,6 +1342,7 @@ M.events = {
 M.on_nth_tick = {
 	[60] = update_player_time_HUD,
 	[60 * 60] = check_is_settings_set,
+	[60 * 60 * 1.5] = spread_infection,
 	[60 * 60 * 5] = start_new_wave,
 	[60 * 60 * 10] = function(event)
 		if event.tick < mod_data.last_wave_tick + (60 * 60 * 5) then
