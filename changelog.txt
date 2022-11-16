@@ -1,8 +1,16 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.3.3
+Date: 2022-11-16
+  Changes:
+    - Small improvements with other mods
+    - Slightly changed HUD style
+  Bugfixes:
+    - Better player data stability after crashes
+---------------------------------------------------------------------------------------------------
 Version: 0.3.2
 Date: 2022-11-15
   Changes:
-    - Slightly changed HUD style
+    - Slightly changed HUD text
 ---------------------------------------------------------------------------------------------------
 Version: 0.3.1
 Date: 2022-11-15

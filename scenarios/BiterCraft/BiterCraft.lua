@@ -39,6 +39,15 @@ local spitter_upgrades = {
 
 --#region Util
 
+--TODO: Refactor?
+local function get_first_valid_prototype(prototypes, names)
+	for _, name in pairs(names) do
+		if prototypes[name] then
+			return name
+		end
+	end
+end
+
 ---Format: mm:ss
 ---@return string
 local function get_wave_time()
@@ -111,6 +120,21 @@ local function teleport_safely(player, surface, target_position)
 	end
 end
 
+function check_player_data()
+	for _, player_index in pairs(mod_data.init_players) do
+		local player = game.get_player(player_index)
+		if not (player and player.valid) then
+			mod_data.init_players[player_index] = nil
+		end
+	end
+	for _, player_index in pairs(mod_data.player_HUD_data) do
+		local player = game.get_player(player_index)
+		if not (player and player.valid and player.connected) then
+			player_HUD_data[player_index] = nil
+		end
+	end
+end
+
 function apply_bonuses()
 	local player_force = game.forces.player
 	player_force.manual_mining_speed_modifier = 50
@@ -138,17 +162,23 @@ function research_techs()
 		"gate",
 		"gun-turret",
 		"optics",
+		"optics-2", -- From another mod
+		"optics-3", -- From another mod
+		"cclp", -- From Color_Combinator_Lamp_Posts
 		"automation",
 		"electronics",
 		"fast-inserter",
 		"automation-2",
 		"electric-energy-distribution-1",
 		"steel-processing",
+		"steel-axe",
+		"textplates-steel", -- From textplates
 		"engine",
 		"railway",
 		"automated-rail-signals",
 		"automated-rail-transportation",
-		"steel-axe",
+		"trainassembly-automated-train-assembling", -- From trainConstructionSite
+		"trainfuel-2", -- From trainConstructionSite
 		"rail-signals",
 		"logistic-science-pack",
 		"circuit-network"
@@ -179,13 +209,15 @@ function insert_start_items(player)
 	mod_data.init_players[player.index] = game.tick
 
 	local item_prototypes = game.item_prototypes
+	local surface = game.get_surface(1)
 
-	local car_name = "car"
-	if game.entity_prototypes[car_name] then
-		local surface = game.get_surface(1)
+	local cars = {"turbo-bike", "car"}
+	local car_name = get_first_valid_prototype(game.entity_prototypes, cars)
+	local car
+	if car_name then
 		local non_colliding_position = surface.find_non_colliding_position(car_name, {0, 0}, 200, 5)
 		if non_colliding_position then
-			local car = surface.create_entity{
+			car = surface.create_entity{
 				name = car_name, force = "player",
 				position = player.position
 			}
@@ -202,6 +234,10 @@ function insert_start_items(player)
 				player.insert(stack)
 			end
 		end
+	end
+
+	if car == nil then
+		teleport_safely(player, surface, {0, 0})
 	end
 
 	for _, item_data in pairs(START_PLAYER_ITEMS) do
@@ -258,9 +294,9 @@ function delete_settings_gui()
 	end
 end
 
-function teleport_players_to_center(players)
+function teleport_players(players, target_position)
+	target_position = target_position or {0, 0}
 	local surface = game.get_surface(1)
-	local target_position = {0, 0}
 	for _, player in pairs(players) do
 		if player.valid then
 			teleport_safely(player, surface, target_position)
@@ -678,11 +714,11 @@ function create_info_HUD(player)
 	end
 
 	local main_frame = screen.add{type = "frame", name = "BC_info_HUD_frame", direction = "horizontal"}
-	main_frame.location = prev_location or {x = 40, y = 40}
+	main_frame.location = prev_location or {x = 50, y = 50}
 	-- main_frame.style.horizontal_spacing = 0 -- it doesn't work
 	main_frame.style.padding = 0
 	local draggable_space = main_frame.add({type = "empty-widget", style = "draggable_space"})
-	draggable_space.style.width = 10
+	draggable_space.style.width = 15
 	draggable_space.style.height = 20
 	draggable_space.style.margin = 0
 	draggable_space.drag_target = main_frame
@@ -764,6 +800,10 @@ local function on_player_joined_game(event)
 	local player_index = event.player_index
 	local player = game.get_player(player_index)
 	if not (player and player.valid) then return end
+
+	if #game.connected_players == 1 then
+		check_player_data()
+	end
 
 	if mod_data.is_settings_set == false and player.admin then
 		create_lobby_settings_GUI(player)
@@ -1009,7 +1049,7 @@ end
 local function on_entity_cloned(event)
 	local destination = event.destination
 	if not destination.valid then return end
-	if destination.force.index ~= 2 then return end
+	if destination.force.index ~= 2 then return end -- if not enemy force
 
 	mod_data.enemy_unit_group.add_member(destination)
 end
@@ -1190,19 +1230,7 @@ function update_global_data()
 
 	link_data()
 
-	-- Validate data
-	for _, player_index in pairs(mod_data.init_players) do
-		local player = game.get_player(player_index)
-		if not (player and player.valid) then
-			mod_data.init_players[player_index] = nil
-		end
-	end
-	for _, player_index in pairs(mod_data.player_HUD_data) do
-		local player = game.get_player(player_index)
-		if not (player and player.valid and player.connected) then
-			player_HUD_data[player_index] = nil
-		end
-	end
+	check_player_data()
 end
 
 
@@ -1269,7 +1297,7 @@ M.on_nth_tick = {
 		end
 		upgrade_biters()
 	end,
-	[300] = check_map
+	[450] = check_map
 }
 
 
