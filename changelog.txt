@@ -1,8 +1,18 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.5.0
+Date: 2022-11-18
+  Features:
+    - Added double and triple enemy chance per line
+  Changes:
+    - Enemy lines depends on map size (you can add more enemy lines now)
+    - Removed double waves
+  Notes:
+    - I should stay away from fancy interfaces to add more gameplay features faster and some special one
+---------------------------------------------------------------------------------------------------
 Version: 0.4.0
 Date: 2022-11-16
   Features:
-    - Added infection mode as a setting in the scenario
+    - Added infection mode (change it on new rounds)
 ---------------------------------------------------------------------------------------------------
 Version: 0.3.4
 Date: 2022-11-16

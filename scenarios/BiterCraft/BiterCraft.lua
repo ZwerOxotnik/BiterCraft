@@ -106,11 +106,13 @@ local function teleport_safely(player, surface, target_position)
 		player.teleport(target_position, surface)
 	else
 		local target
+		local is_vehicle = false
 		local vehicle = player.vehicle
 		local target_name
 		if vehicle and not vehicle.train and vehicle.get_driver() == character and vehicle.get_passenger() == nil then
 			target = vehicle
 			target_name = vehicle.name
+			is_vehicle = true
 		else
 			target = player
 			target_name = character.name
@@ -119,6 +121,13 @@ local function teleport_safely(player, surface, target_position)
 		local non_colliding_position = surface.find_non_colliding_position(target_name, target_position, radius, 5)
 
 		if non_colliding_position then
+			if is_vehicle then
+				if vehicle.type == "spider-vehicle" then
+					target.stop_spider()
+				else
+					target.speed = 0
+				end
+			end
 			target.teleport(non_colliding_position, surface)
 		else
 			player.print("It's not possible to teleport you because there's not enough space for your character")
@@ -753,6 +762,10 @@ local function create_lobby_settings_GUI(player)
 	textfield_content.add{type = "textfield", name = "BC_defend_lines_textfield", text = mod_data.defend_lines_count or 3, numeric = true, allow_decimal = false, allow_negative = false}.style.maximal_width = 70
 	textfield_content.add(LABEL).caption = {'', "Technology price multiplier", COLON}
 	textfield_content.add{type = "textfield", name = "BC_tech_price_multiplier_textfield", text = mod_data.technology_price_multiplier or 1, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+	textfield_content.add(LABEL).caption = {'', {"BiterCraft-settings.double_enemy_chance"}, COLON}
+	textfield_content.add{type = "textfield", name = "BC_double_enemy_chance_textfield", text = mod_data.double_enemy_chance or 0, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+	textfield_content.add(LABEL).caption = {'', {"BiterCraft-settings.triple_enemy_chance"}, COLON}
+	textfield_content.add{type = "textfield", name = "BC_triple_enemy_chance_textfield", text = mod_data.triple_enemy_chance or 0, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
 	-- content2.add(LABEL).caption = "Map size:"
 	-- content2.add{type = "textfield", name = "BC_map_size_textfield", text = 30000}.style.maximal_width = 70
 
@@ -769,13 +782,10 @@ local function create_lobby_settings_GUI(player)
 	-- BC_wave_bosses_flow.add(LABEL).caption = {'', "Wave bosses", COLON}
 	-- BC_wave_bosses_flow.add{type = "checkbox", name = "BC_wave_bosses_checkbox", state = false}
 
-	local BC_research_all_flow = main_frame.add{type = "flow", name = "BC_research_all_flow"}
-	BC_research_all_flow.add(LABEL).caption = {'', "Unlock and research all technologies", COLON}
-	BC_research_all_flow.add{type = "checkbox", name = "BC_research_all_checkbox", state = mod_data.is_research_all or false}
+	local research_all_flow = main_frame.add{type = "flow", name = "BC_research_all_flow"}
+	research_all_flow.add(LABEL).caption = {'', "Unlock and research all technologies", COLON}
+	research_all_flow.add{type = "checkbox", name = "BC_research_all_checkbox", state = mod_data.is_research_all or false}
 
-	local BC_wave_bosses_flow = main_frame.add{type = "flow", name = "BC_double_wave_flow"}
-	BC_wave_bosses_flow.add(LABEL).caption = {'', {"BiterCraft-settings.double_wave"}, COLON}
-	BC_wave_bosses_flow.add{type = "checkbox", name = "BC_double_wave_checkbox", state = mod_data.is_double_wave_on or false}
 
 	local BC_infection_mode_flow = main_frame.add{type = "flow", name = "BC_infection_mode_flow"}
 	label = BC_infection_mode_flow.add(LABEL)
@@ -912,12 +922,14 @@ local GUIS = {
 			local textfield_content = main_frame.BC_textfield_content
 			local defend_lines_textfield = textfield_content.BC_defend_lines_textfield
 			local tech_price_multiplier_textfield = textfield_content.BC_tech_price_multiplier_textfield
+			local double_enemy_chance_textfield = textfield_content.BC_double_enemy_chance_textfield
+			local triple_enemy_chance_textfield = textfield_content.BC_triple_enemy_chance_textfield
 
 			local defend_lines_count = tonumber(defend_lines_textfield.text) or 1
 			if defend_lines_count < 1 then
 				defend_lines_count = 1
-			elseif defend_lines_count > 10 then
-				defend_lines_count = 10
+			elseif defend_lines_count > floor((mod_data.map_size - 200) / 200) then
+				defend_lines_count = floor((mod_data.map_size - 200) / 200)
 			end
 			mod_data.defend_lines_count = defend_lines_count
 
@@ -931,8 +943,26 @@ local GUIS = {
 			end
 			mod_data.tech_price_multiplier = tech_price_multiplier
 
-			local double_wave_checkbox = main_frame.BC_double_wave_flow.BC_double_wave_checkbox
-			mod_data.is_double_wave_on = double_wave_checkbox.state
+			local double_enemy_chance = tonumber(double_enemy_chance_textfield.text) or 0
+			if double_enemy_chance <= 0  then
+				double_enemy_chance = -1
+			elseif double_enemy_chance > 100 then
+				double_enemy_chance = 1
+			else
+				double_enemy_chance = double_enemy_chance / 100
+			end
+			mod_data.double_enemy_chance = double_enemy_chance
+
+			local triple_enemy_chance = tonumber(triple_enemy_chance_textfield.text) or 0
+			if triple_enemy_chance <= 0  then
+				triple_enemy_chance = -1
+			elseif triple_enemy_chance > 100 then
+				triple_enemy_chance = 1
+			else
+				triple_enemy_chance = triple_enemy_chance / 100
+			end
+			mod_data.triple_enemy_chance = triple_enemy_chance
+
 			local research_all_checkbox = main_frame.BC_research_all_flow.BC_research_all_checkbox
 			mod_data.is_research_all = research_all_checkbox.state
 			local is_always_day_checkbox = main_frame.BC_is_always_day_flow.BC_is_always_day_checkbox
@@ -1083,7 +1113,11 @@ do
 			destination_right_bottom[1] = map_border + length - 10
 			destination_right_bottom[2] = h_length * i + height - 10
 
-			if mod_data.is_double_wave_on and (current_wave % 10 == 0) then
+			if random() <= mod_data.triple_enemy_chance then
+				clone_area(clone_data)
+				clone_area(clone_data)
+				clone_area(clone_data)
+			elseif random() <= mod_data.double_enemy_chance then
 				clone_area(clone_data)
 				clone_area(clone_data)
 			else
@@ -1292,7 +1326,8 @@ function update_global_data()
 	mod_data.generate_new_round_tick = mod_data.generate_new_round_tick
 	mod_data.init_players = mod_data.init_players or {}
 	mod_data.infection_sources = mod_data.infection_sources or {}
-	mod_data.is_double_wave_on = mod_data.is_double_wave_on or false
+	mod_data.double_enemy_chance = mod_data.double_enemy_chance or 0
+	mod_data.triple_enemy_chance = mod_data.triple_enemy_chance or 0
 
 	link_data()
 
