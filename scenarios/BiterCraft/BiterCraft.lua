@@ -762,6 +762,8 @@ local function create_lobby_settings_GUI(player)
 	textfield_content.add{type = "textfield", name = "BC_defend_lines_textfield", text = mod_data.defend_lines_count or 3, numeric = true, allow_decimal = false, allow_negative = false}.style.maximal_width = 70
 	textfield_content.add(LABEL).caption = {'', "Technology price multiplier", COLON}
 	textfield_content.add{type = "textfield", name = "BC_tech_price_multiplier_textfield", text = mod_data.technology_price_multiplier or 1, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+	textfield_content.add(LABEL).caption = {'', {"BiterCraft-settings.no_enemies_chance"}, COLON}
+	textfield_content.add{type = "textfield", name = "BC_no_enemies_chance_textfield", text = mod_data.no_enemies_chance or 0, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
 	textfield_content.add(LABEL).caption = {'', {"BiterCraft-settings.double_enemy_chance"}, COLON}
 	textfield_content.add{type = "textfield", name = "BC_double_enemy_chance_textfield", text = mod_data.double_enemy_chance or 0, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
 	textfield_content.add(LABEL).caption = {'', {"BiterCraft-settings.triple_enemy_chance"}, COLON}
@@ -922,6 +924,7 @@ local GUIS = {
 			local textfield_content = main_frame.BC_textfield_content
 			local defend_lines_textfield = textfield_content.BC_defend_lines_textfield
 			local tech_price_multiplier_textfield = textfield_content.BC_tech_price_multiplier_textfield
+			local no_enemies_chance_textfield = textfield_content.BC_no_enemies_chance_textfield
 			local double_enemy_chance_textfield = textfield_content.BC_double_enemy_chance_textfield
 			local triple_enemy_chance_textfield = textfield_content.BC_triple_enemy_chance_textfield
 
@@ -962,6 +965,16 @@ local GUIS = {
 				triple_enemy_chance = triple_enemy_chance / 100
 			end
 			mod_data.triple_enemy_chance = triple_enemy_chance
+
+			local no_enemies_chance = tonumber(no_enemies_chance_textfield.text) or 0
+			if no_enemies_chance <= 0  then
+				no_enemies_chance = -1
+			elseif no_enemies_chance > 100 then
+				no_enemies_chance = 1
+			else
+				no_enemies_chance = no_enemies_chance / 100
+			end
+			mod_data.no_enemies_chance = no_enemies_chance
 
 			local research_all_checkbox = main_frame.BC_research_all_flow.BC_research_all_checkbox
 			mod_data.is_research_all = research_all_checkbox.state
@@ -1113,7 +1126,8 @@ do
 			destination_right_bottom[1] = map_border + length - 10
 			destination_right_bottom[2] = h_length * i + height - 10
 
-			if random() <= mod_data.triple_enemy_chance then
+			if random() <= mod_data.no_enemies_chance then
+			elseif random() <= mod_data.triple_enemy_chance then
 				clone_area(clone_data)
 				clone_area(clone_data)
 				clone_area(clone_data)
@@ -1326,8 +1340,9 @@ function update_global_data()
 	mod_data.generate_new_round_tick = mod_data.generate_new_round_tick
 	mod_data.init_players = mod_data.init_players or {}
 	mod_data.infection_sources = mod_data.infection_sources or {}
-	mod_data.double_enemy_chance = mod_data.double_enemy_chance or 0
+	mod_data.double_enemy_chance = mod_data.double_enemy_chance or 10
 	mod_data.triple_enemy_chance = mod_data.triple_enemy_chance or 0
+	mod_data.no_enemies_chance = mod_data.no_enemies_chance or 0
 
 	link_data()
 
