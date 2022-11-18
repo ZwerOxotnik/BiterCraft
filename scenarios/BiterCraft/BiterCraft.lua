@@ -339,14 +339,14 @@ do
 		local create_entity = surface.create_entity
 		local enemy_tech_lvl = mod_data.enemy_tech_lvl
 
-		biter_data.name = biter_upgrades[enemy_tech_lvl]
+		biter_data.name = biter_upgrades[enemy_tech_lvl] or biter_upgrades[#biter_upgrades]
 		for _ = 1, spawn_count do
 			biter_pos[1] = random(25000, 25050)
 			biter_pos[2] = random(10, 50)
 			create_entity(biter_data)
 		end
 
-		biter_data.name = spitter_upgrades[enemy_tech_lvl]
+		biter_data.name = spitter_upgrades[enemy_tech_lvl] or spitter_upgrades[#spitter_upgrades]
 		for _ = 1, spawn_count do
 			biter_pos[1] = random(25000, 25050)
 			biter_pos[2] = random(10, 50)
@@ -736,11 +736,14 @@ function create_info_HUD(player)
 	player_HUD_data[player.index] = {wave_label, time_label}
 end
 
+-- TODO: refactor at some point
 local function create_lobby_settings_GUI(player)
 	local center = player.gui.center
 	if center.BC_lobby_settings_frame then
 		return
 	end
+
+	local is_settings_set = mod_data.is_settings_set
 
 	-- local is_multiplayer = game.is_multiplayer()
 
@@ -752,22 +755,49 @@ local function create_lobby_settings_GUI(player)
 
 	local checkbox
 	local label
+	local text
+	local number
 
 	local textfield_content = main_frame.add{type = "table", name = "BC_textfield_content", column_count = 2}
 	-- content2.add(LABEL).caption = {'', "Biter price multiplier", COLON}
 	-- content2.add{type = "textfield", name = "BC_biter_price_mult_textfield", text = 1}.style.maximal_width = 70
 	-- textfield_content.add(LABEL).caption = "Biter difficulty:"
 	-- textfield_content.add{type = "textfield", name = "BC_biter_difficulty_textfield", text = 30, numeric = true, allow_decimal = false, allow_negative = false}.style.maximal_width = 70
-	textfield_content.add(LABEL).caption = {'', "Defend lines", COLON}
-	textfield_content.add{type = "textfield", name = "BC_defend_lines_textfield", text = mod_data.defend_lines_count or 3, numeric = true, allow_decimal = false, allow_negative = false}.style.maximal_width = 70
+
+	if not is_settings_set then
+		textfield_content.add(LABEL).caption = {'', "Defend lines", COLON}
+		textfield_content.add{type = "textfield", name = "BC_defend_lines_textfield", text = mod_data.defend_lines_count or 3, numeric = true, allow_decimal = false, allow_negative = false}.style.maximal_width = 70
+	end
+
 	textfield_content.add(LABEL).caption = {'', "Technology price multiplier", COLON}
 	textfield_content.add{type = "textfield", name = "BC_tech_price_multiplier_textfield", text = mod_data.technology_price_multiplier or 1, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+
 	textfield_content.add(LABEL).caption = {'', {"BiterCraft-settings.no_enemies_chance"}, COLON}
-	textfield_content.add{type = "textfield", name = "BC_no_enemies_chance_textfield", text = mod_data.no_enemies_chance or 0, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+	number = mod_data.no_enemies_chance * 100
+	if number < 0 then
+		text = "0"
+	else
+		text = tostring(number)
+	end
+	textfield_content.add{type = "textfield", name = "BC_no_enemies_chance_textfield", text = text, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+
 	textfield_content.add(LABEL).caption = {'', {"BiterCraft-settings.double_enemy_chance"}, COLON}
-	textfield_content.add{type = "textfield", name = "BC_double_enemy_chance_textfield", text = mod_data.double_enemy_chance or 0, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+	number = mod_data.double_enemy_chance * 100
+	if number < 0 then
+		text = "0"
+	else
+		text = tostring(number)
+	end
+	textfield_content.add{type = "textfield", name = "BC_double_enemy_chance_textfield", text = text, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+
 	textfield_content.add(LABEL).caption = {'', {"BiterCraft-settings.triple_enemy_chance"}, COLON}
-	textfield_content.add{type = "textfield", name = "BC_triple_enemy_chance_textfield", text = mod_data.triple_enemy_chance or 0, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+	number = mod_data.triple_enemy_chance * 100
+	if number < 0 then
+		text = "0"
+	else
+		text = tostring(number)
+	end
+	textfield_content.add{type = "textfield", name = "BC_triple_enemy_chance_textfield", text = text, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
 	-- content2.add(LABEL).caption = "Map size:"
 	-- content2.add{type = "textfield", name = "BC_map_size_textfield", text = 30000}.style.maximal_width = 70
 
@@ -784,10 +814,11 @@ local function create_lobby_settings_GUI(player)
 	-- BC_wave_bosses_flow.add(LABEL).caption = {'', "Wave bosses", COLON}
 	-- BC_wave_bosses_flow.add{type = "checkbox", name = "BC_wave_bosses_checkbox", state = false}
 
-	local research_all_flow = main_frame.add{type = "flow", name = "BC_research_all_flow"}
-	research_all_flow.add(LABEL).caption = {'', "Unlock and research all technologies", COLON}
-	research_all_flow.add{type = "checkbox", name = "BC_research_all_checkbox", state = mod_data.is_research_all or false}
-
+	if not is_settings_set then
+		local research_all_flow = main_frame.add{type = "flow", name = "BC_research_all_flow"}
+		research_all_flow.add(LABEL).caption = {'', "Unlock and research all technologies", COLON}
+		research_all_flow.add{type = "checkbox", name = "BC_research_all_checkbox", state = mod_data.is_research_all or false}
+	end
 
 	local BC_infection_mode_flow = main_frame.add{type = "flow", name = "BC_infection_mode_flow"}
 	label = BC_infection_mode_flow.add(LABEL)
@@ -806,10 +837,17 @@ local function create_lobby_settings_GUI(player)
 
 
 	local content3 = main_frame.add{type = "table", name = "BC_content3", column_count = 3}
+
 	local empty = content3.add(EMPTY_WIDGET)
 	empty.style.right_margin = 0
 	empty.style.horizontally_stretchable = true
-	content3.add{type = "button", name = "BC_confirm_settings", caption = "Confirm"}
+
+	local confirm_button = content3.add{type = "button", caption = {"gui.confirm"}}
+	if is_settings_set then
+		confirm_button.name = "BC_update_settings"
+	else
+		confirm_button.name = "BC_confirm_settings"
+	end
 	local empty = content3.add(EMPTY_WIDGET)
 	empty.style.right_margin = 0
 	empty.style.horizontally_stretchable = true
@@ -918,8 +956,77 @@ local GUIS = {
 	BC_close = function(element)
 		element.parent.parent.destroy()
 	end,
-	BC_confirm_settings = function(element, player, event)
+	BC_update_settings = function(element, player, event)
 		if player.admin then
+			local surface = game.get_surface(1)
+			local main_frame = player.gui.center.BC_lobby_settings_frame
+			local textfield_content = main_frame.BC_textfield_content
+			local tech_price_multiplier_textfield = textfield_content.BC_tech_price_multiplier_textfield
+			local no_enemies_chance_textfield = textfield_content.BC_no_enemies_chance_textfield
+			local double_enemy_chance_textfield = textfield_content.BC_double_enemy_chance_textfield
+			local triple_enemy_chance_textfield = textfield_content.BC_triple_enemy_chance_textfield
+
+			local tech_price_multiplier = tonumber(tech_price_multiplier_textfield.text) or 1
+			if tech_price_multiplier == 0 then
+			tech_price_multiplier = 1
+			elseif tech_price_multiplier < 0.001 then
+				tech_price_multiplier = 0.001
+			elseif tech_price_multiplier > 1000 then
+				tech_price_multiplier = 1000
+			end
+			mod_data.tech_price_multiplier = tech_price_multiplier
+			game.difficulty_settings.technology_price_multiplier = mod_data.tech_price_multiplier
+
+			local double_enemy_chance = tonumber(double_enemy_chance_textfield.text) or 0
+			if double_enemy_chance <= 0  then
+				double_enemy_chance = -1
+			elseif double_enemy_chance > 100 then
+				double_enemy_chance = 1
+			else
+				double_enemy_chance = double_enemy_chance / 100
+			end
+			mod_data.double_enemy_chance = double_enemy_chance
+
+			local triple_enemy_chance = tonumber(triple_enemy_chance_textfield.text) or 0
+			if triple_enemy_chance <= 0  then
+				triple_enemy_chance = -1
+			elseif triple_enemy_chance > 100 then
+				triple_enemy_chance = 1
+			else
+				triple_enemy_chance = triple_enemy_chance / 100
+			end
+			mod_data.triple_enemy_chance = triple_enemy_chance
+
+			local no_enemies_chance = tonumber(no_enemies_chance_textfield.text) or 0
+			if no_enemies_chance <= 0  then
+				no_enemies_chance = -1
+			elseif no_enemies_chance > 100 then
+				no_enemies_chance = 1
+			else
+				no_enemies_chance = no_enemies_chance / 100
+			end
+			mod_data.no_enemies_chance = no_enemies_chance
+
+			local is_always_day_checkbox = main_frame.BC_is_always_day_flow.BC_is_always_day_checkbox
+			mod_data.is_always_day = is_always_day_checkbox.state
+			surface.always_day = mod_data.is_always_day
+
+			local infection_mode_checkbox = main_frame.BC_infection_mode_flow.BC_infection_mode_checkbox
+			mod_data.infection_mode = infection_mode_checkbox.state
+		end
+
+		local frame = player.gui.center.BC_lobby_settings_frame
+		if frame and frame.valid then
+			frame.destroy()
+		end
+	end,
+	BC_confirm_settings = function(element, player, event)
+		if player.admin == false then
+			local frame = player.gui.center.BC_lobby_settings_frame
+			if frame and frame.valid then
+				frame.destroy()
+			end
+		else
 			local main_frame = player.gui.center.BC_lobby_settings_frame
 			local textfield_content = main_frame.BC_textfield_content
 			local defend_lines_textfield = textfield_content.BC_defend_lines_textfield
@@ -985,11 +1092,6 @@ local GUIS = {
 
 			delete_settings_gui()
 			set_game_rules_by_settings()
-		else
-			local frame = player.gui.center.BC_lobby_settings_frame
-			if frame and frame.valid then
-				frame.destroy()
-			end
 		end
 	end
 }
@@ -1018,14 +1120,14 @@ end
 
 do
 	local worm_data = {name = "", force = "enemy", position = nil}
-	function spread_infection(event)
+	function spread_infection()
 		local infection_sources = mod_data.infection_sources
 		if #infection_sources == 0 then return end
 
 		local surface = game.get_surface(1)
 		local create_entity = surface.create_entity
 		local enemy_tech_lvl = mod_data.enemy_tech_lvl
-		local worm_name = worm_upgrades[enemy_tech_lvl]
+		local worm_name = worm_upgrades[enemy_tech_lvl] or worm_upgrades[#worm_upgrades]
 		local left_top = {0, 0}
 		local right_bottom = {0, 0}
 		local search_space = {left_top = left_top, right_bottom = right_bottom}
@@ -1088,14 +1190,14 @@ do
 		local spawn_per_wave = mod_data.spawn_per_wave
 
 		-- Spawn new enemies
-		biter_data.name = biter_upgrades[enemy_tech_lvl]
+		biter_data.name = biter_upgrades[enemy_tech_lvl] or biter_upgrades[#biter_upgrades]
 		for _ = 1, spawn_per_wave do
 			biter_pos[1] = random(25000, 25050)
 			biter_pos[2] = random(10, 50)
 			create_entity(biter_data)
 		end
 
-		biter_data.name = spitter_upgrades[enemy_tech_lvl]
+		biter_data.name = spitter_upgrades[enemy_tech_lvl] or spitter_upgrades[#spitter_upgrades]
 		for _ = 1, spawn_per_wave do
 			biter_pos[1] = random(25000, 25050)
 			biter_pos[2] = random(10, 50)
@@ -1113,7 +1215,7 @@ do
 		local map_border = mod_data.map_size/2
 		local clone_area = surface.clone_area
 		local infection_sources = mod_data.infection_sources
-		biter_data.name = worm_upgrades[enemy_tech_lvl]
+		biter_data.name = worm_upgrades[enemy_tech_lvl] or worm_upgrades[#worm_upgrades]
 		for i = -h_size, h_size do
 			if mod_data.infection_mode then
 				biter_pos[1] = random(map_border + length - 70, map_border + length - 60)
@@ -1229,6 +1331,21 @@ commands.add_command("base", {"BiterCraft-commands.base"}, function(cmd)
 	teleport_safely(player, surface, target_position)
 end)
 
+commands.add_command("change-settings", {"BiterCraft-commands.change-settings"}, function(cmd)
+	if cmd.player_index == 0 then -- server
+		return
+	end
+
+	local player = game.get_player(cmd.player_index)
+	if not (player and player.valid) then return end
+	if player.admin == false then
+		player.print({"command-output.parameters-require-admin"}, {1, 0, 0})
+		return
+	end
+
+	create_lobby_settings_GUI(player)
+end)
+
 commands.add_command("show-wave", {"BiterCraft-commands.show-wave"}, function(cmd)
 	if cmd.player_index == 0 then -- server
 		print(mod_data.current_wave)
@@ -1340,7 +1457,7 @@ function update_global_data()
 	mod_data.generate_new_round_tick = mod_data.generate_new_round_tick
 	mod_data.init_players = mod_data.init_players or {}
 	mod_data.infection_sources = mod_data.infection_sources or {}
-	mod_data.double_enemy_chance = mod_data.double_enemy_chance or 10
+	mod_data.double_enemy_chance = mod_data.double_enemy_chance or 0.1
 	mod_data.triple_enemy_chance = mod_data.triple_enemy_chance or 0
 	mod_data.no_enemies_chance = mod_data.no_enemies_chance or 0
 

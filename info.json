@@ -1,6 +1,6 @@
 {
     "name": "BiterCraft",
-    "version": "0.5.1",
+    "version": "0.5.2",
     "factorio_version": "1.1",
     "title": "BiterCraft",
     "author": "ZwerOxotnik",
@@ -9,7 +9,7 @@
     "homepage": "https://www.reddit.com/r/ZwerOxotnik/",
     "description": "[Work in progress] PvE wave scenario, PvP will be added later.",
     "dependencies": [
-			"? N_biters_in_1",
-			"(?) gvv"
-		]
+      "? N_biters_in_1",
+      "(?) gvv"
+    ]
 }
