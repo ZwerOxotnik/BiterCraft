@@ -1,4 +1,11 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.5.3
+Date: 2022-11-19
+  Features:
+    - Admins can change map size via /change-settings during a round (new size will be applied for next rounds)
+  Changes:
+    - Default map size is 5000x5000 tiles now
+---------------------------------------------------------------------------------------------------
 Version: 0.5.2
 Date: 2022-11-18
   Features:

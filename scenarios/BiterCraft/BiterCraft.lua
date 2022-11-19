@@ -390,7 +390,8 @@ local function generate_map_territory()
 	surface.set_tiles(tiles, false, false, false)
 
 	local length = 100
-	local steps = map_size / 2 / length
+	local steps = floor(map_size / 2 / length)
+	mod_data.map_size = steps * 2 * length -- dirty fix!
 	for i = -steps, steps-1 do
 		for j = -steps, steps-1 do
 			surface.clone_area{
@@ -405,7 +406,7 @@ local function generate_map_territory()
 	end
 
 	local length = 1000
-	local steps = map_size / 2 / length
+	local steps = floor(map_size / 2 / length)
 	for i = -steps, steps-1 do
 		for j = -steps, steps-1 do
 			surface.clone_area{
@@ -767,6 +768,9 @@ local function create_lobby_settings_GUI(player)
 	if not is_settings_set then
 		textfield_content.add(LABEL).caption = {'', "Defend lines", COLON}
 		textfield_content.add{type = "textfield", name = "BC_defend_lines_textfield", text = mod_data.defend_lines_count or 3, numeric = true, allow_decimal = false, allow_negative = false}.style.maximal_width = 70
+	else
+		textfield_content.add(LABEL).caption = {'', "Map size", COLON}
+		textfield_content.add{type = "textfield", name = "BC_map_size_textfield", text = mod_data.next_map_size, numeric = true, allow_decimal = false, allow_negative = false}.style.maximal_width = 70
 	end
 
 	textfield_content.add(LABEL).caption = {'', "Technology price multiplier", COLON}
@@ -965,6 +969,7 @@ local GUIS = {
 			local no_enemies_chance_textfield = textfield_content.BC_no_enemies_chance_textfield
 			local double_enemy_chance_textfield = textfield_content.BC_double_enemy_chance_textfield
 			local triple_enemy_chance_textfield = textfield_content.BC_triple_enemy_chance_textfield
+			local map_size_textfield = textfield_content.BC_map_size_textfield
 
 			local tech_price_multiplier = tonumber(tech_price_multiplier_textfield.text) or 1
 			if tech_price_multiplier == 0 then
@@ -1006,6 +1011,14 @@ local GUIS = {
 				no_enemies_chance = no_enemies_chance / 100
 			end
 			mod_data.no_enemies_chance = no_enemies_chance
+
+			local map_size = tonumber(map_size_textfield.text) or 0
+			if map_size < 1600 then
+				map_size = 1600
+			elseif map_size > 1000000 then
+				map_size = 1000000
+			end
+			mod_data.next_map_size = map_size
 
 			local is_always_day_checkbox = main_frame.BC_is_always_day_flow.BC_is_always_day_checkbox
 			mod_data.is_always_day = is_always_day_checkbox.state
@@ -1406,6 +1419,7 @@ function new_round()
 
 	game.print({"BiterCraft.generating_new_round"}, YELLOW_COLOR)
 
+	mod_data.map_size = mod_data.next_map_size or mod_data.map_size
 	mod_data.defend_points = {}
 	mod_data.infection_sources = {}
 	mod_data.generate_new_round = true
@@ -1436,7 +1450,8 @@ function update_global_data()
 
 	global.BiterCraft = global.BiterCraft or {}
 	mod_data = global.BiterCraft
-	mod_data.map_size = mod_data.map_size or 6000
+	mod_data.map_size = mod_data.map_size or 5000
+	mod_data.next_map_size = mod_data.next_map_size or mod_data.map_size
 	mod_data.defend_lines_count = mod_data.defend_lines_count or 3
 	mod_data.current_wave = mod_data.current_wave or 0
 	mod_data.tech_price_multiplier = mod_data.tech_price_multiplier or 1
