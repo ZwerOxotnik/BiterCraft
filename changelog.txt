@@ -1,4 +1,9 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.6.0
+Date: 2022-12-16
+  Features:
+    - Added new setting: "Enemies depends on technologies" (I'll provide more information later, it should balance the game better)
+---------------------------------------------------------------------------------------------------
 Version: 0.5.3
 Date: 2022-11-19
   Features:

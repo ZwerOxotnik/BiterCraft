@@ -205,6 +205,23 @@ function research_techs()
 	end
 end
 
+function count_techs(team_name)
+	local researched_techs = 0
+	local total_techs = 0
+
+	local technologies = game.forces[team_name].technologies
+	for _, tech in pairs(technologies) do
+		if tech.research_unit_count_formula == nil and not tech.upgrade then
+			total_techs = total_techs + 1
+			if tech.researched then
+				researched_techs = researched_techs + 1
+			end
+		end
+	end
+
+	return researched_techs, total_techs
+end
+
 function update_player_wave_HUD()
 	local next_wave = tostring(mod_data.current_wave + 1)
 	for _, HUDs in pairs(player_HUD_data) do
@@ -811,7 +828,7 @@ local function create_lobby_settings_GUI(player)
 	-- biter_crafting_flow.add{type = "checkbox", name = "BC_biter_crafting_checkbox", state = true}
 
 	-- local ev_on_techs_flow = main_frame.add{type = "flow", name = "BC_ev_on_techs_flow"}
-	-- ev_on_techs_flow.add(LABEL).caption = {'', "Evolution on techs", COLON}
+	-- ev_on_techs_flow.add(LABEL).caption = {'', "Evolution on technologies", COLON}
 	-- ev_on_techs_flow.add{type = "checkbox", name = "BC_ev_on_techs_checkbox", state = false}
 
 	-- local BC_wave_bosses_flow = main_frame.add{type = "flow", name = "BC_wave_bosses_flow"}
@@ -823,6 +840,10 @@ local function create_lobby_settings_GUI(player)
 		research_all_flow.add(LABEL).caption = {'', "Unlock and research all technologies", COLON}
 		research_all_flow.add{type = "checkbox", name = "BC_research_all_checkbox", state = mod_data.is_research_all or false}
 	end
+
+	local BC_enemies_depends_on_techs_flow = main_frame.add{type = "flow", name = "BC_enemies_depends_on_techs_flow"}
+	BC_enemies_depends_on_techs_flow.add(LABEL).caption = {'', "Enemies depends on technologies", COLON}
+	BC_enemies_depends_on_techs_flow.add{type = "checkbox", name = "BC_enemies_depends_on_techs_checkbox", state = mod_data.enemies_depends_on_techs or false}
 
 	local BC_infection_mode_flow = main_frame.add{type = "flow", name = "BC_infection_mode_flow"}
 	label = BC_infection_mode_flow.add(LABEL)
@@ -914,6 +935,7 @@ local function on_game_created_from_scenario()
 	mod_data.last_wave_tick = game.tick
 	mod_data.is_settings_set = false -- TODO: change it!
 	mod_data.generate_new_round = false
+	mod_data.is_there_new_tech = false
 	mod_data.spawn_enemy_count = 0
 	mod_data.enemy_tech_lvl = 1
 	mod_data.enemy_unit_group = surface.create_unit_group{position={0, 0}, force="enemy"}
@@ -1023,6 +1045,9 @@ local GUIS = {
 			local is_always_day_checkbox = main_frame.BC_is_always_day_flow.BC_is_always_day_checkbox
 			mod_data.is_always_day = is_always_day_checkbox.state
 			surface.always_day = mod_data.is_always_day
+
+			local enemies_depends_on_techs_checkbox = main_frame.BC_enemies_depends_on_techs_flow.BC_enemies_depends_on_techs_checkbox
+			mod_data.enemies_depends_on_techs = enemies_depends_on_techs_checkbox.state
 
 			local infection_mode_checkbox = main_frame.BC_infection_mode_flow.BC_infection_mode_checkbox
 			mod_data.infection_mode = infection_mode_checkbox.state
@@ -1170,6 +1195,28 @@ do
 	end
 end
 
+function check_techs()
+	if mod_data.is_there_new_tech ~= true then return end
+	if mod_data.generate_new_round then return end
+	local enemy_tech_lvl = mod_data.enemy_tech_lvl
+	if enemy_tech_lvl >= #biter_upgrades then return end
+
+	-- TODO: add settings
+	local researched_techs, total_techs = count_techs("player")
+	local tech_ratio = researched_techs / total_techs
+	if enemy_tech_lvl < 4 and tech_ratio > 0.9 then
+		for _ = 1, 4 - enemy_tech_lvl do
+			upgrade_biters()
+		end
+	elseif enemy_tech_lvl < 3 and tech_ratio > 0.6 then
+		for _ = 1, 3 - enemy_tech_lvl do
+			upgrade_biters()
+		end
+	elseif enemy_tech_lvl < 2 and tech_ratio > 0.3 then
+		upgrade_biters()
+	end
+end
+
 
 do
 	local length = 400
@@ -1277,6 +1324,13 @@ local function on_entity_cloned(event)
 	if destination.force.index ~= 2 then return end -- if not enemy force
 
 	mod_data.enemy_unit_group.add_member(destination)
+end
+
+local function on_research_finished(event)
+	local force = event.research.force
+	if not (force and force.valid) then return end
+	if force.name ~= "player" then return end
+	mod_data.is_there_new_tech = true
 end
 
 --#endregion
@@ -1423,6 +1477,7 @@ function new_round()
 	mod_data.defend_points = {}
 	mod_data.infection_sources = {}
 	mod_data.generate_new_round = true
+	mod_data.is_there_new_tech = false
 	mod_data.generate_new_round_tick = game.tick
 end
 
@@ -1457,6 +1512,8 @@ function update_global_data()
 	mod_data.tech_price_multiplier = mod_data.tech_price_multiplier or 1
 	mod_data.enemy_unit_group = mod_data.enemy_unit_group or surface.create_unit_group{position={0, 0}, force="enemy"}
 	mod_data.last_wave_tick = mod_data.last_wave_tick or game.tick
+	mod_data.enemies_depends_on_techs = mod_data.enemies_depends_on_techs or false
+	mod_data.is_there_new_tech = mod_data.is_there_new_tech or false
 	mod_data.generate_new_round = mod_data.generate_new_round or false
 	mod_data.is_settings_set = mod_data.is_settings_set or false
 	mod_data.is_research_all = mod_data.is_research_all or false
@@ -1518,13 +1575,15 @@ M.events = {
 	[defines.events.on_player_removed] = on_player_removed,
 	[defines.events.on_gui_click] = on_gui_click,
 	[defines.events.on_entity_destroyed] = on_entity_destroyed,
-	[defines.events.on_entity_cloned] = on_entity_cloned
+	[defines.events.on_entity_cloned] = on_entity_cloned,
+	[defines.events.on_research_finished] = on_research_finished
 }
 
 M.on_nth_tick = {
 	[60] = update_player_time_HUD,
 	[60 * 60] = check_is_settings_set,
 	[60 * 60 * 1.5] = spread_infection,
+	[60 * 60 * 2] = check_techs,
 	[60 * 60 * 5] = start_new_wave,
 	[60 * 60 * 10] = function(event)
 		if event.tick < mod_data.last_wave_tick + (60 * 60 * 5) then
