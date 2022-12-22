@@ -1,4 +1,14 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.6.1
+Date: 2022-12-22
+  Bugfixes:
+    - Fixed timer in the HUD for some cases and for changed game speed
+    - Fixed changing of "Enemies depends on technologies" setting via /change-settings
+  Changes:
+    - "Infection mode" renamed to "Enemy expansion mode"
+  Notes:
+    - Please, consider to use GTTS mod with "Enemies depends on technologies" setting on.
+---------------------------------------------------------------------------------------------------
 Version: 0.6.0
 Date: 2022-12-16
   Features:

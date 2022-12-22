@@ -61,10 +61,12 @@ local function get_wave_time()
 	local next_wave_tick = mod_data.last_wave_tick + (60 * 60 * 5)
 	local tick = next_wave_tick - game.tick
 
-	local mins = floor(tick / (60 * 60))
-	local seconds = floor((tick - (mins * 60 * 60)) / 60)
+	local ticks_in_1_second = 60 * game.speed
+	local ticks_in_1_minute = 60 * ticks_in_1_second
+	local mins = floor(tick / ticks_in_1_minute)
+	local seconds = floor((tick - (mins * ticks_in_1_minute)) / ticks_in_1_second)
 
-	if mins < 9 then
+	if mins < 10 then
 		if mins == 0 then
 			mins = "00"
 		else
@@ -72,7 +74,7 @@ local function get_wave_time()
 		end
 	end
 
-	if seconds < 9 then
+	if seconds < 10 then
 		if seconds == 0 then
 			seconds = "00"
 		else
@@ -178,7 +180,7 @@ function research_techs()
 		"optics",
 		"optics-2", -- From another mod
 		"optics-3", -- From another mod
-		"cclp", -- From Color_Combinator_Lamp_Posts
+		"cclp", -- From Color_Combinator_Lamp_Posts mod
 		"automation",
 		"electronics",
 		"fast-inserter",
@@ -186,13 +188,13 @@ function research_techs()
 		"electric-energy-distribution-1",
 		"steel-processing",
 		"steel-axe",
-		"textplates-steel", -- From textplates
+		"textplates-steel", -- From textplates mod
 		"engine",
 		"railway",
 		"automated-rail-signals",
 		"automated-rail-transportation",
-		"trainassembly-automated-train-assembling", -- From trainConstructionSite
-		"trainfuel-2", -- From trainConstructionSite
+		"trainassembly-automated-train-assembling", -- From trainConstructionSite mod
+		"trainfuel-2", -- From trainConstructionSite mod
 		"rail-signals",
 		"logistic-science-pack",
 		"circuit-network"
@@ -845,12 +847,12 @@ local function create_lobby_settings_GUI(player)
 	BC_enemies_depends_on_techs_flow.add(LABEL).caption = {'', "Enemies depends on technologies", COLON}
 	BC_enemies_depends_on_techs_flow.add{type = "checkbox", name = "BC_enemies_depends_on_techs_checkbox", state = mod_data.enemies_depends_on_techs or false}
 
-	local BC_infection_mode_flow = main_frame.add{type = "flow", name = "BC_infection_mode_flow"}
-	label = BC_infection_mode_flow.add(LABEL)
-	label.caption = {'', "[img=info] ", {"BiterCraft-settings.infection_mode"}, COLON}
-	label.tooltip = {"BiterCraft-settings-tooltips.infection_mode"}
-	checkbox = BC_infection_mode_flow.add{type = "checkbox", name = "BC_infection_mode_checkbox", state = mod_data.infection_mode or false}
-	checkbox.tooltip = {"BiterCraft-settings-tooltips.infection_mode"}
+	local BC_enemy_expansion_mode_flow = main_frame.add{type = "flow", name = "BC_enemy_expansion_mode_flow"}
+	label = BC_enemy_expansion_mode_flow.add(LABEL)
+	label.caption = {'', "[img=info] ", {"BiterCraft-settings.enemy_expansion_mode"}, COLON}
+	label.tooltip = {"BiterCraft-settings-tooltips.enemy_expansion_mode"}
+	checkbox = BC_enemy_expansion_mode_flow.add{type = "checkbox", name = "BC_enemy_expansion_mode_checkbox", state = mod_data.enemy_expansion_mode or false}
+	checkbox.tooltip = {"BiterCraft-settings-tooltips.enemy_expansion_mode"}
 
 	local BC_is_always_day_flow = main_frame.add{type = "flow", name = "BC_is_always_day_flow"}
 	BC_is_always_day_flow.add(LABEL).caption = {'', "Is always day", COLON}
@@ -927,7 +929,7 @@ end
 local function on_game_created_from_scenario()
 	local surface = game.get_surface(1)
 
-	mod_data.infection_sources = {}
+	mod_data.enemy_expansion_sources = {}
 	mod_data.init_players = {}
 	mod_data.defend_points = {}
 	mod_data.last_upgrade_tick = game.tick
@@ -1049,8 +1051,8 @@ local GUIS = {
 			local enemies_depends_on_techs_checkbox = main_frame.BC_enemies_depends_on_techs_flow.BC_enemies_depends_on_techs_checkbox
 			mod_data.enemies_depends_on_techs = enemies_depends_on_techs_checkbox.state
 
-			local infection_mode_checkbox = main_frame.BC_infection_mode_flow.BC_infection_mode_checkbox
-			mod_data.infection_mode = infection_mode_checkbox.state
+			local enemy_expansion_mode_checkbox = main_frame.BC_enemy_expansion_mode_flow.BC_enemy_expansion_mode_checkbox
+			mod_data.enemy_expansion_mode = enemy_expansion_mode_checkbox.state
 		end
 
 		local frame = player.gui.center.BC_lobby_settings_frame
@@ -1125,8 +1127,10 @@ local GUIS = {
 			mod_data.is_research_all = research_all_checkbox.state
 			local is_always_day_checkbox = main_frame.BC_is_always_day_flow.BC_is_always_day_checkbox
 			mod_data.is_always_day = is_always_day_checkbox.state
-			local infection_mode_checkbox = main_frame.BC_infection_mode_flow.BC_infection_mode_checkbox
-			mod_data.infection_mode = infection_mode_checkbox.state
+			local enemies_depends_on_techs_checkbox = main_frame.BC_enemies_depends_on_techs_flow.BC_enemies_depends_on_techs_checkbox
+			mod_data.enemies_depends_on_techs = enemies_depends_on_techs_checkbox.state
+			local enemy_expansion_mode_checkbox = main_frame.BC_enemy_expansion_mode_flow.BC_enemy_expansion_mode_checkbox
+			mod_data.enemy_expansion_mode = enemy_expansion_mode_checkbox.state
 
 			delete_settings_gui()
 			set_game_rules_by_settings()
@@ -1159,8 +1163,8 @@ end
 do
 	local worm_data = {name = "", force = "enemy", position = nil}
 	function spread_infection()
-		local infection_sources = mod_data.infection_sources
-		if #infection_sources == 0 then return end
+		local enemy_expansion_sources = mod_data.enemy_expansion_sources
+		if #enemy_expansion_sources == 0 then return end
 
 		local surface = game.get_surface(1)
 		local create_entity = surface.create_entity
@@ -1170,8 +1174,8 @@ do
 		local right_bottom = {0, 0}
 		local search_space = {left_top = left_top, right_bottom = right_bottom}
 		worm_data.name = worm_name
-		for i=#infection_sources, 1, -1 do
-			local entity = infection_sources[i]
+		for i=#enemy_expansion_sources, 1, -1 do
+			local entity = enemy_expansion_sources[i]
 			if entity.valid then
 				local pos = entity.position
 				local x = pos.x
@@ -1184,17 +1188,22 @@ do
 				-- local non_colliding_position = surface.find_non_colliding_position(worm_name, entity.position, 14, 14)
 				if non_colliding_position then
 					worm_data.position = non_colliding_position
-					infection_sources[#infection_sources+1] = create_entity(worm_data)
+					enemy_expansion_sources[#enemy_expansion_sources+1] = create_entity(worm_data)
 				else
-					tremove(infection_sources, i)
+					tremove(enemy_expansion_sources, i)
 				end
 			else
-				tremove(infection_sources, i)
+				tremove(enemy_expansion_sources, i)
 			end
 		end
 	end
 end
 
+local tech_ratios = {
+	[2] = 0.3,
+	[3] = 0.6,
+	[4] = 0.9
+}
 function check_techs()
 	if mod_data.is_there_new_tech ~= true then return end
 	if mod_data.generate_new_round then return end
@@ -1204,16 +1213,12 @@ function check_techs()
 	-- TODO: add settings
 	local researched_techs, total_techs = count_techs("player")
 	local tech_ratio = researched_techs / total_techs
-	if enemy_tech_lvl < 4 and tech_ratio > 0.9 then
-		for _ = 1, 4 - enemy_tech_lvl do
-			upgrade_biters()
+	for tech_level, req_tech_ratio in pairs(tech_ratios) do
+		if enemy_tech_lvl < tech_level and  tech_ratio > req_tech_ratio then
+			for _ = 1, tech_level - enemy_tech_lvl do
+				upgrade_biters() -- TODO: refactor
+			end
 		end
-	elseif enemy_tech_lvl < 3 and tech_ratio > 0.6 then
-		for _ = 1, 3 - enemy_tech_lvl do
-			upgrade_biters()
-		end
-	elseif enemy_tech_lvl < 2 and tech_ratio > 0.3 then
-		upgrade_biters()
 	end
 end
 
@@ -1274,13 +1279,13 @@ do
 		local h_size = floor(defend_lines_count/2)
 		local map_border = mod_data.map_size/2
 		local clone_area = surface.clone_area
-		local infection_sources = mod_data.infection_sources
+		local enemy_expansion_sources = mod_data.enemy_expansion_sources
 		biter_data.name = worm_upgrades[enemy_tech_lvl] or worm_upgrades[#worm_upgrades]
 		for i = -h_size, h_size do
-			if mod_data.infection_mode then
+			if mod_data.enemy_expansion_mode then
 				biter_pos[1] = random(map_border + length - 70, map_border + length - 60)
 				biter_pos[2] = random(h_length * i + 10, h_length * i + height - 10)
-				infection_sources[#infection_sources+1] = create_entity(biter_data)
+				enemy_expansion_sources[#enemy_expansion_sources+1] = create_entity(biter_data)
 			end
 
 			destination_left_top[1] = map_border + length - 60
@@ -1475,7 +1480,7 @@ function new_round()
 
 	mod_data.map_size = mod_data.next_map_size or mod_data.map_size
 	mod_data.defend_points = {}
-	mod_data.infection_sources = {}
+	mod_data.enemy_expansion_sources = {}
 	mod_data.generate_new_round = true
 	mod_data.is_there_new_tech = false
 	mod_data.generate_new_round_tick = game.tick
@@ -1518,7 +1523,10 @@ function update_global_data()
 	mod_data.is_settings_set = mod_data.is_settings_set or false
 	mod_data.is_research_all = mod_data.is_research_all or false
 	mod_data.is_always_day = mod_data.is_always_day or false
-	mod_data.infection_mode = mod_data.infection_mode or false
+	if mod_data.enemy_expansion_mode == nil then
+		mod_data.enemy_expansion_mode = mod_data.infection_mode or false
+		mod_data.infection_mode = nil
+	end
 	mod_data.defend_points = mod_data.defend_points or {}
 	mod_data.player_HUD_data = mod_data.player_HUD_data or {}
 	mod_data.spawn_enemy_count = mod_data.spawn_enemy_count or 0
@@ -1528,7 +1536,10 @@ function update_global_data()
 	mod_data.spawn_per_wave = mod_data.spawn_per_wave or 1
 	mod_data.generate_new_round_tick = mod_data.generate_new_round_tick
 	mod_data.init_players = mod_data.init_players or {}
-	mod_data.infection_sources = mod_data.infection_sources or {}
+	if mod_data.enemy_expansion_sources == nil then
+		mod_data.enemy_expansion_sources = mod_data.infection_sources or {}
+		mod_data.infection_sources = nil
+	end
 	mod_data.double_enemy_chance = mod_data.double_enemy_chance or 0.1
 	mod_data.triple_enemy_chance = mod_data.triple_enemy_chance or 0
 	mod_data.no_enemies_chance = mod_data.no_enemies_chance or 0
@@ -1581,6 +1592,7 @@ M.events = {
 
 M.on_nth_tick = {
 	[60] = update_player_time_HUD,
+	[450] = check_map,
 	[60 * 60] = check_is_settings_set,
 	[60 * 60 * 1.5] = spread_infection,
 	[60 * 60 * 2] = check_techs,
@@ -1604,8 +1616,7 @@ M.on_nth_tick = {
 			return
 		end
 		upgrade_biters()
-	end,
-	[450] = check_map
+	end
 }
 
 
