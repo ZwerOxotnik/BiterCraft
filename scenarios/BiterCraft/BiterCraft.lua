@@ -42,6 +42,12 @@ local worm_upgrades = {
 	"big-worm-turret",
 	"behemoth-worm-turret"
 }
+local evolution_values = {
+	[1] = 0,
+	[2] = 0.3,
+	[3] = 0.6,
+	[4] = 1,
+}
 
 
 --#region Util
@@ -357,6 +363,8 @@ do
 
 		local create_entity = surface.create_entity
 		local enemy_tech_lvl = mod_data.enemy_tech_lvl
+
+		game.forces.enemy.evolution_factor = evolution_values[enemy_tech_lvl]
 
 		biter_data.name = biter_upgrades[enemy_tech_lvl] or biter_upgrades[#biter_upgrades]
 		for _ = 1, spawn_count do
@@ -942,6 +950,8 @@ local function on_game_created_from_scenario()
 	mod_data.enemy_tech_lvl = 1
 	mod_data.enemy_unit_group = surface.create_unit_group{position={0, 0}, force="enemy"}
 
+	game.forces.enemy.evolution_factor = evolution_values[1]
+
 	generate_map_territory()
 	create_resources() -- the map shouldn't have entities
 	make_defend_target()
@@ -1161,8 +1171,8 @@ function check_is_settings_set(event)
 end
 
 do
-	local worm_data = {name = "", force = "enemy", position = nil}
-	function spread_infection()
+	local entity_data = {name = "", force = "enemy", position = nil}
+	function expand_biters()
 		local enemy_expansion_sources = mod_data.enemy_expansion_sources
 		if #enemy_expansion_sources == 0 then return end
 
@@ -1173,10 +1183,16 @@ do
 		local left_top = {0, 0}
 		local right_bottom = {0, 0}
 		local search_space = {left_top = left_top, right_bottom = right_bottom}
-		worm_data.name = worm_name
+
+		-- Spawn a worm or biter spawner
 		for i=#enemy_expansion_sources, 1, -1 do
 			local entity = enemy_expansion_sources[i]
 			if entity.valid then
+				if random() < 0.09 then
+					entity_data.name = "biter-spawner"
+				else
+					entity_data.name = worm_name
+				end
 				local pos = entity.position
 				local x = pos.x
 				local y = pos.y
@@ -1187,8 +1203,8 @@ do
 				local non_colliding_position = surface.find_non_colliding_position_in_box(worm_name, search_space, 20, true)
 				-- local non_colliding_position = surface.find_non_colliding_position(worm_name, entity.position, 14, 14)
 				if non_colliding_position then
-					worm_data.position = non_colliding_position
-					enemy_expansion_sources[#enemy_expansion_sources+1] = create_entity(worm_data)
+					entity_data.position = non_colliding_position
+					enemy_expansion_sources[#enemy_expansion_sources+1] = create_entity(entity_data)
 				else
 					tremove(enemy_expansion_sources, i)
 				end
@@ -1594,7 +1610,7 @@ M.on_nth_tick = {
 	[60] = update_player_time_HUD,
 	[450] = check_map,
 	[60 * 60] = check_is_settings_set,
-	[60 * 60 * 1.5] = spread_infection,
+	[60 * 60 * 1.5] = expand_biters,
 	[60 * 60 * 2] = check_techs,
 	[60 * 60 * 5] = start_new_wave,
 	[60 * 60 * 10] = function(event)

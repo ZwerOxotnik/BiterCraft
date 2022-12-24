@@ -1,4 +1,10 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.6.2
+Date: 2022-12-24
+  Changes:
+    - "Enemy expansion mode" spawns biter spawners also now
+    - As enemy upgrades it changes biters evolution
+---------------------------------------------------------------------------------------------------
 Version: 0.6.1
 Date: 2022-12-22
   Bugfixes:
