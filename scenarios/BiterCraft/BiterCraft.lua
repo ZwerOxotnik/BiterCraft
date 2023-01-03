@@ -855,6 +855,10 @@ local function create_lobby_settings_GUI(player)
 	BC_enemies_depends_on_techs_flow.add(LABEL).caption = {'', "Enemies depends on technologies", COLON}
 	BC_enemies_depends_on_techs_flow.add{type = "checkbox", name = "BC_enemies_depends_on_techs_checkbox", state = mod_data.enemies_depends_on_techs or false}
 
+	local BC_new_wave_on_new_tech_flow = main_frame.add{type = "flow", name = "BC_new_wave_on_new_tech_flow"}
+	BC_new_wave_on_new_tech_flow.add(LABEL).caption = {'', {"BiterCraft-settings.new_wave_on_new_tech"}, COLON}
+	BC_new_wave_on_new_tech_flow.add{type = "checkbox", name = "BC_new_wave_on_new_tech_checkbox", state = mod_data.new_wave_on_new_tech or false}
+
 	local BC_enemy_expansion_mode_flow = main_frame.add{type = "flow", name = "BC_enemy_expansion_mode_flow"}
 	label = BC_enemy_expansion_mode_flow.add(LABEL)
 	label.caption = {'', "[img=info] ", {"BiterCraft-settings.enemy_expansion_mode"}, COLON}
@@ -1061,6 +1065,9 @@ local GUIS = {
 			local enemies_depends_on_techs_checkbox = main_frame.BC_enemies_depends_on_techs_flow.BC_enemies_depends_on_techs_checkbox
 			mod_data.enemies_depends_on_techs = enemies_depends_on_techs_checkbox.state
 
+			local BC_new_wave_on_new_tech_checkbox = main_frame.BC_new_wave_on_new_tech_flow.BC_new_wave_on_new_tech_checkbox
+			mod_data.new_wave_on_new_tech = BC_new_wave_on_new_tech_checkbox.state
+
 			local enemy_expansion_mode_checkbox = main_frame.BC_enemy_expansion_mode_flow.BC_enemy_expansion_mode_checkbox
 			mod_data.enemy_expansion_mode = enemy_expansion_mode_checkbox.state
 		end
@@ -1135,10 +1142,16 @@ local GUIS = {
 
 			local research_all_checkbox = main_frame.BC_research_all_flow.BC_research_all_checkbox
 			mod_data.is_research_all = research_all_checkbox.state
+
 			local is_always_day_checkbox = main_frame.BC_is_always_day_flow.BC_is_always_day_checkbox
 			mod_data.is_always_day = is_always_day_checkbox.state
+
 			local enemies_depends_on_techs_checkbox = main_frame.BC_enemies_depends_on_techs_flow.BC_enemies_depends_on_techs_checkbox
 			mod_data.enemies_depends_on_techs = enemies_depends_on_techs_checkbox.state
+
+			local BC_new_wave_on_new_tech_checkbox = main_frame.BC_new_wave_on_new_tech_flow.BC_new_wave_on_new_tech_checkbox
+			mod_data.new_wave_on_new_tech = BC_new_wave_on_new_tech_checkbox.state
+
 			local enemy_expansion_mode_checkbox = main_frame.BC_enemy_expansion_mode_flow.BC_enemy_expansion_mode_checkbox
 			mod_data.enemy_expansion_mode = enemy_expansion_mode_checkbox.state
 
@@ -1257,14 +1270,16 @@ do
 	local biter_data = {name = "", force = "enemy", position = biter_pos}
 	local command_data = {type = defines.command.attack, target = nil}
 	function start_new_wave(event)
-		if event.tick < mod_data.last_wave_tick + (60 * 60 * 4) then
+		if not event.ignore_time and event.tick < mod_data.last_wave_tick + (60 * 60 * 4) then
 			return
 		end
 		if mod_data.generate_new_round then return end
 
 		local current_wave = mod_data.current_wave + 1
 		mod_data.current_wave = current_wave
-		mod_data.last_wave_tick = event.tick
+		if not event.ignore_time then
+			mod_data.last_wave_tick = event.tick
+		end
 		local surface = game.get_surface(1)
 		local enemy_tech_lvl = mod_data.enemy_tech_lvl
 		local create_entity = surface.create_entity
@@ -1348,10 +1363,16 @@ local function on_entity_cloned(event)
 end
 
 local function on_research_finished(event)
+	if mod_data.generate_new_round then return end
 	local force = event.research.force
 	if not (force and force.valid) then return end
 	if force.name ~= "player" then return end
+
 	mod_data.is_there_new_tech = true
+	if mod_data.new_wave_on_new_tech then
+		event.ignore_time = true
+		start_new_wave(event)
+	end
 end
 
 --#endregion
@@ -1359,7 +1380,7 @@ end
 
 commands.add_command("skip-wave", {"BiterCraft-commands.skip-wave"}, function(event)
 	if event.player_index == 0 then -- server
-		mod_data.last_wave_tick = -60 * 60 * 4
+		event.ignore_time = true
 		start_new_wave(event)
 		return
 	end
@@ -1370,7 +1391,7 @@ commands.add_command("skip-wave", {"BiterCraft-commands.skip-wave"}, function(ev
 		player.print({"command-output.parameters-require-admin"}, {1, 0, 0})
 		return
 	end
-	mod_data.last_wave_tick = -60 * 60 * 4
+	event.ignore_time = true
 	start_new_wave(event)
 end)
 
@@ -1559,6 +1580,7 @@ function update_global_data()
 	mod_data.double_enemy_chance = mod_data.double_enemy_chance or 0.1
 	mod_data.triple_enemy_chance = mod_data.triple_enemy_chance or 0
 	mod_data.no_enemies_chance = mod_data.no_enemies_chance or 0
+	mod_data.new_wave_on_new_tech = mod_data.new_wave_on_new_tech or false
 
 	link_data()
 

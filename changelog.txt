@@ -1,4 +1,11 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.7.0
+Date: 2023-01-03
+  Features:
+    - Added new setting: "New wave on new technologies" (spawn enemies when players researched a technology without. It doesn't reset the wave timer)
+  Changes:
+    - /skip-wave doesn't reset wave timer anymore
+---------------------------------------------------------------------------------------------------
 Version: 0.6.2
 Date: 2022-12-24
   Changes:
