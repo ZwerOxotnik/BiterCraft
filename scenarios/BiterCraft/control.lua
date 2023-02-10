@@ -8,7 +8,7 @@ local modules = {}
 modules.BiterCraft = require("BiterCraft")
 
 
-local event_handler = require("event_handler_vZO")
+local event_handler = require("static-lib/lualibs/event_handler_vZO")
 event_handler.add_libraries(modules)
 
 

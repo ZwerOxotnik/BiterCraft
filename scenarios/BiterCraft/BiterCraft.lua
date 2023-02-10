@@ -6,6 +6,9 @@ local M = {}
 -- TODO: remind players about commands
 -- TODO: track player data
 
+---@type ZKMarket
+local market_util = require("static-lib/lualibs/market-util")
+
 
 --#region Global game data
 local mod_data
@@ -22,6 +25,7 @@ local EMPTY_WIDGET = {type = "empty-widget"}
 local COLON = {"colon"}
 local LABEL = {type = "label"}
 local YELLOW_COLOR = {1, 1, 0}
+local DEFAULT_MARKET_OFFERS = require("default_market_offers")
 
 
 local biter_upgrades = {
@@ -532,6 +536,7 @@ end
 
 local function make_defend_target()
 	local surface = game.get_surface(1)
+	---@cast surface LuaSurface
 	local entity = surface.create_entity{
 		name = "rocket-silo", force = "player",
 		position = {0, 0}
@@ -539,6 +544,22 @@ local function make_defend_target()
 	entity.minable = false
 	mod_data.target_entity = entity
 	mod_data.entity_target_event_id = script.register_on_entity_destroyed(entity)
+
+	local market_name = "market"
+	if game.entity_prototypes[market_name] then
+		local market = surface.create_entity{
+			name = market_name, force = "player",
+			position = {-6, 0}
+		}
+		---@cast market LuaEntity
+		market.minable = false
+		mod_data.main_market = market
+
+		market_util.add_offers_safely(market, DEFAULT_MARKET_OFFERS)
+		market_util.add_offer_safely(market, {price={{"steel-plate", 1000}}, offer={type="gun-speed", ammo_category = "bullet", modifier = 0.2}})
+		mod_data.main_market_indexes["bullet-gun-speed"] = #market.get_market_items()
+		mod_data.bonuses["bullet-gun-speed"] = 1
+	end
 
 	local turret_name = "gun-turret"
 	if game.entity_prototypes[turret_name] then
@@ -892,6 +913,25 @@ local function create_lobby_settings_GUI(player)
 	empty.style.horizontally_stretchable = true
 end
 
+local function on_market_item_purchased(event)
+	local market = event.market
+	if not (market and market.valid) then return end
+	if mod_data.main_market ~= market then return end
+	local player_index = event.player_index
+	local player = game.get_player(player_index)
+	if not (player and player.valid) then return end
+
+	local market_indexes = mod_data.main_market_indexes
+	local offer_index = event.offer_index
+	if offer_index == market_indexes["bullet-gun-speed"] then
+		local bonuses = mod_data.bonuses
+		local modifier = bonuses["bullet-gun-speed"] + 1
+		bonuses["bullet-gun-speed"] = modifier
+		market_util.add_offer_safely(market, {price={{"steel-plate", 1000 * modifier}}, offer={type="gun-speed", ammo_category = "bullet", modifier = 0.2}})
+		market.remove_market_item(offer_index)
+		market_indexes["bullet-gun-speed"] = #market.get_market_items()
+	end
+end
 
 local function on_player_joined_game(event)
 	local player_index = event.player_index
@@ -1518,9 +1558,12 @@ function new_round()
 	mod_data.map_size = mod_data.next_map_size or mod_data.map_size
 	mod_data.defend_points = {}
 	mod_data.enemy_expansion_sources = {}
+	mod_data.main_market_indexes = {}
+	mod_data.bonuses = {}
 	mod_data.generate_new_round = true
 	mod_data.is_there_new_tech = false
 	mod_data.generate_new_round_tick = game.tick
+	mod_data.main_market = nil
 end
 
 
@@ -1547,6 +1590,8 @@ function update_global_data()
 
 	global.BiterCraft = global.BiterCraft or {}
 	mod_data = global.BiterCraft
+	mod_data.main_market_indexes = mod_data.main_market_indexes or {}
+	mod_data.bonuses = mod_data.bonuses or {}
 	mod_data.map_size = mod_data.map_size or 5000
 	mod_data.next_map_size = mod_data.next_map_size or mod_data.map_size
 	mod_data.defend_lines_count = mod_data.defend_lines_count or 3
@@ -1625,7 +1670,8 @@ M.events = {
 	[defines.events.on_gui_click] = on_gui_click,
 	[defines.events.on_entity_destroyed] = on_entity_destroyed,
 	[defines.events.on_entity_cloned] = on_entity_cloned,
-	[defines.events.on_research_finished] = on_research_finished
+	[defines.events.on_research_finished] = on_research_finished,
+	[defines.events.on_market_item_purchased] = on_market_item_purchased
 }
 
 M.on_nth_tick = {
