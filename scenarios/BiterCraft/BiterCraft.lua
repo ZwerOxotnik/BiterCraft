@@ -553,6 +553,8 @@ local function make_defend_target()
 		}
 		---@cast market LuaEntity
 		market.minable = false
+		market.destructible = false
+		market.rotatable = false
 		mod_data.main_market = market
 
 		market_util.add_offers_safely(market, DEFAULT_MARKET_OFFERS)
