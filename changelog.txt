@@ -1,4 +1,13 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.8.3
+Date: 2023-02-19
+  Features:
+    - Added new setting: "Fill map with water" (change it via /change-settings )
+  Changes:
+    - Default UPS with GTTS is 30 now
+  Bugfixes:
+    - Improved stability between rounds
+---------------------------------------------------------------------------------------------------
 Version: 0.8.2
 Date: 2023-02-10
   Changes:

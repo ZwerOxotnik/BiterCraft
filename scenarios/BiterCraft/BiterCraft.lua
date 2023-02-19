@@ -426,8 +426,8 @@ local function generate_map_territory()
 	for i = -steps, steps-1 do
 		for j = -steps, steps-1 do
 			surface.clone_area{
-				source_area={left_top = {x = -length, y = -length}, right_bottom = {x = 0, y = 0}},
-				destination_area={left_top = {x = i*length, y = j*length}, right_bottom = {x = i*length+length, y = j*length+length}},
+				source_area = {left_top = {x = -length, y = -length}, right_bottom = {x = 0, y = 0}},
+				destination_area = {left_top = {x = i*length, y = j*length}, right_bottom = {x = i*length+length, y = j*length+length}},
 				destination_force="neutral", clone_tiles=true, clone_entities=false,
 				clone_decoratives=false, clear_destination_entities=false,
 				clear_destination_decoratives=false, expand_map=false,
@@ -441,8 +441,8 @@ local function generate_map_territory()
 	for i = -steps, steps-1 do
 		for j = -steps, steps-1 do
 			surface.clone_area{
-				source_area={left_top = {x = -length, y = -length}, right_bottom = {x = 0, y = 0}},
-				destination_area={left_top = {x = i*length, y = j*length}, right_bottom = {x = i*length+length, y = j*length+length}},
+				source_area = {left_top = {x = -length, y = -length}, right_bottom = {x = 0, y = 0}},
+				destination_area = {left_top = {x = i*length, y = j*length}, right_bottom = {x = i*length+length, y = j*length+length}},
 				destination_force="neutral", clone_tiles=true, clone_entities=false,
 				clone_decoratives=false, clear_destination_entities=false,
 				clear_destination_decoratives=false, expand_map=false,
@@ -463,6 +463,94 @@ local function generate_map_territory()
 	end
 end
 
+---TODO: optimize and refactor!
+function fill_map_with_water()
+	local map_size = mod_data.map_size
+	local half_size = map_size / 2
+	local surface = game.get_surface(1)
+	local tiles = {}
+
+	-- Set refined-concrete tiles
+	local c = 0
+	for i = 1, half_size - 150 do
+		c = c + 1
+		tiles[c] = {position = {-half_size, -150 - i}, name = "water"}
+		if c > 1024 then
+			surface.set_tiles(tiles, false, false, false)
+			tiles = {}
+			c = 0
+		end
+	end
+	surface.set_tiles(tiles, false, false, false)
+
+
+	surface.clone_area{
+		source_area = {
+			left_top = {x = -half_size, y = -half_size},
+			right_bottom = {x = -half_size+1, y = -150}
+		},
+		destination_area = {
+			left_top = {x = -half_size + 1, y = -half_size},
+			right_bottom = {x = -half_size + 2, y = -150}
+		},
+		destination_force="neutral", clone_tiles=true, clone_entities=false,
+		clone_decoratives=false, clear_destination_entities=false,
+		clear_destination_decoratives=false, expand_map=false,
+		create_build_effect_smoke=false
+	}
+	local i = 1
+	while true do
+		surface.clone_area{
+			source_area = {
+				left_top = {x = -half_size, y = -half_size},
+				right_bottom = {x = -half_size + i + 1, y = -150}
+			},
+			destination_area = {
+				left_top = {x = -half_size + i + 1, y = -half_size},
+				right_bottom = {x = -half_size + i * 2 + 2, y = -150}
+			},
+			destination_force="neutral", clone_tiles=true, clone_entities=false,
+			clone_decoratives=false, clear_destination_entities=false,
+			clear_destination_decoratives=false, expand_map=false,
+			create_build_effect_smoke=false
+		}
+		i = i * 2
+		if i * 2 > map_size - 150 then
+			local size = map_size - 150 - i
+			surface.clone_area{
+				source_area = {
+					left_top = {x = -half_size, y = -half_size},
+					right_bottom = {x = -half_size + size, y = -150}
+				},
+				destination_area = {
+					left_top = {x = -half_size + i + 1, y = -half_size},
+					right_bottom = {x = -half_size + i + size + 1, y = -150}
+				},
+				destination_force="neutral", clone_tiles=true, clone_entities=false,
+				clone_decoratives=false, clear_destination_entities=false,
+				clear_destination_decoratives=false, expand_map=false,
+				create_build_effect_smoke=false
+			}
+			break
+		end
+	end
+
+	surface.clone_area{
+		source_area = {
+			left_top = {x = -half_size, y = -half_size},
+			right_bottom = {x = half_size - 150, y = -150}
+		},
+		destination_area = {
+			left_top = {x = -half_size, y = 150},
+			right_bottom = {x = half_size - 150, y = half_size}
+		},
+		destination_force="neutral", clone_tiles=true, clone_entities=false,
+		clone_decoratives=false, clear_destination_entities=false,
+		clear_destination_decoratives=false, expand_map=false,
+		create_build_effect_smoke=false
+	}
+end
+
 
 local function make_defend_lines()
 	local map_border = mod_data.map_size/2
@@ -474,8 +562,8 @@ local function make_defend_lines()
 	local destination_left_top = {0, 0}
 	local destination_right_bottom = {0, 0}
 	local clone_data = {
-		source_area={left_top = {-length/2, -height/2}, right_bottom = {length/2, height/2}},
-		destination_area={left_top = destination_left_top, right_bottom = destination_right_bottom},
+		source_area = {left_top = {-length/2, -height/2}, right_bottom = {length/2, height/2}},
+		destination_area = {left_top = destination_left_top, right_bottom = destination_right_bottom},
 		clone_tiles=true, clone_entities=false,
 		clone_decoratives=false, clear_destination_entities=false,
 		clear_destination_decoratives=false, expand_map=false,
@@ -650,8 +738,8 @@ local function create_resources()
 	local destination_left_top = {0, 0}
 	local destination_right_bottom = {0, 0}
 	local clone_data = {
-		source_area={left_top = source_left_top, right_bottom = source_right_bottom},
-		destination_area={left_top = destination_left_top, right_bottom = destination_right_bottom},
+		source_area = {left_top = source_left_top, right_bottom = source_right_bottom},
+		destination_area = {left_top = destination_left_top, right_bottom = destination_right_bottom},
 		clone_tiles=false, clone_entities=true,
 		clone_decoratives=false, clear_destination_entities=false,
 		clear_destination_decoratives=false, expand_map=false,
@@ -872,6 +960,10 @@ local function create_lobby_settings_GUI(player)
 		local research_all_flow = main_frame.add{type = "flow", name = "BC_research_all_flow"}
 		research_all_flow.add(LABEL).caption = {'', "Unlock and research all technologies", COLON}
 		research_all_flow.add{type = "checkbox", name = "BC_research_all_checkbox", state = mod_data.is_research_all or false}
+	else
+		local fill_water_flow = main_frame.add{type = "flow", name = "BC_fill_water_flow"}
+		fill_water_flow.add(LABEL).caption = {'', "Fill map with water", COLON}
+		fill_water_flow.add{type = "checkbox", name = "BC_fill_water_checkbox", state = mod_data.is_map_filled_with_water or false}
 	end
 
 	local BC_enemies_depends_on_techs_flow = main_frame.add{type = "flow", name = "BC_enemies_depends_on_techs_flow"}
@@ -999,6 +1091,9 @@ local function on_game_created_from_scenario()
 	game.forces.enemy.evolution_factor = evolution_values[1]
 
 	generate_map_territory()
+	if mod_data.is_map_filled_with_water then
+		fill_map_with_water()
+	end
 	create_resources() -- the map shouldn't have entities
 	make_defend_target()
 	apply_bonuses()
@@ -1103,6 +1198,9 @@ local GUIS = {
 			local is_always_day_checkbox = main_frame.BC_is_always_day_flow.BC_is_always_day_checkbox
 			mod_data.is_always_day = is_always_day_checkbox.state
 			surface.always_day = mod_data.is_always_day
+
+			local fill_water_checkbox = main_frame.BC_fill_water_flow.BC_fill_water_checkbox
+			mod_data.is_map_filled_with_water = fill_water_checkbox.state
 
 			local enemies_depends_on_techs_checkbox = main_frame.BC_enemies_depends_on_techs_flow.BC_enemies_depends_on_techs_checkbox
 			mod_data.enemies_depends_on_techs = enemies_depends_on_techs_checkbox.state
@@ -1301,8 +1399,8 @@ do
 	local destination_left_top = {0, 0}
 	local destination_right_bottom = {0, 0}
 	local clone_data = {
-		source_area={left_top = {25000, 10}, right_bottom = {25050, 50}},
-		destination_area={left_top = destination_left_top, right_bottom = destination_right_bottom},
+		source_area = {left_top = {25000, 10}, right_bottom = {25050, 50}},
+		destination_area = {left_top = destination_left_top, right_bottom = destination_right_bottom},
 		clone_tiles=false, clone_entities=true,
 		clone_decoratives=false, clear_destination_entities=false,
 		clear_destination_decoratives=false, expand_map=false,
@@ -1391,7 +1489,7 @@ end
 -- TODO: Refactor
 function check_map(event)
 	if not mod_data.generate_new_round then return end
-	if event.tick + 900 < mod_data.generate_new_round_tick then return end
+	if event.tick < mod_data.generate_new_round_tick then return end
 
 	on_game_created_from_scenario()
 end
@@ -1564,7 +1662,7 @@ function new_round()
 	mod_data.bonuses = {}
 	mod_data.generate_new_round = true
 	mod_data.is_there_new_tech = false
-	mod_data.generate_new_round_tick = game.tick
+	mod_data.generate_new_round_tick = game.tick + 300
 	mod_data.main_market = nil
 end
 
@@ -1628,6 +1726,7 @@ function update_global_data()
 	mod_data.triple_enemy_chance = mod_data.triple_enemy_chance or 0
 	mod_data.no_enemies_chance = mod_data.no_enemies_chance or 0
 	mod_data.new_wave_on_new_tech = mod_data.new_wave_on_new_tech or false
+	mod_data.is_map_filled_with_water = mod_data.is_map_filled_with_water or false
 
 	link_data()
 
@@ -1678,7 +1777,7 @@ M.events = {
 
 M.on_nth_tick = {
 	[60] = update_player_time_HUD,
-	[450] = check_map,
+	[300] = check_map,
 	[60 * 60] = check_is_settings_set,
 	[60 * 60 * 1.5] = expand_biters,
 	[60 * 60 * 2] = check_techs,
