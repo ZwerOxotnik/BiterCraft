@@ -675,8 +675,8 @@ local function make_defend_target()
 		entity.minable = false
 		entity.operable = false
 		entity.destructible = true
-		entity.power_production = 5000
-		entity.electric_buffer_size = 5000
+		entity.power_production = 30000
+		entity.electric_buffer_size = 30000
 		entity.power_usage = 0
 	end
 
@@ -1086,7 +1086,6 @@ local function on_game_created_from_scenario()
 	mod_data.is_there_new_tech = false
 	mod_data.spawn_enemy_count = 0
 	mod_data.enemy_tech_lvl = 1
-	mod_data.enemy_unit_group = surface.create_unit_group{position={0, 0}, force="enemy"}
 
 	game.forces.enemy.evolution_factor = evolution_values[1]
 
@@ -1393,23 +1392,18 @@ function check_techs()
 end
 
 
-local attack_command_data = {type = defines.command.attack, target = nil}
 do
 	local length = 400
 	local h_length = length/2
 	local height = 60
-	local destination_left_top = {0, 0}
-	local destination_right_bottom = {0, 0}
-	local clone_data = {
-		source_area = {left_top = {25000, 10}, right_bottom = {25050, 50}},
-		destination_area = {left_top = destination_left_top, right_bottom = destination_right_bottom},
-		clone_tiles=false, clone_entities=true,
-		clone_decoratives=false, clear_destination_entities=false,
-		clear_destination_decoratives=false, expand_map=false,
-		create_build_effect_smoke=false
-	}
+	local attack_command_data = {type = defines.command.attack, target = nil}
 	local biter_pos = {0, 0}
-	local biter_data = {name = "", force = "enemy", position = biter_pos}
+	local spitter_pos = {0, 0}
+	local worm_pos = {0, 0}
+	local unit_group_data = {position={0, 0}, force="enemy"}
+	local biter_data   = {name = "", force = "enemy", position = biter_pos}
+	local spitter_data = {name = "", force = "enemy", position = spitter_pos}
+	local worm_data = {name = "", force = "enemy", position = worm_pos}
 	function start_new_wave(event)
 		if not event.ignore_time and event.tick < mod_data.last_wave_tick + (60 * 60 * 4) then
 			return
@@ -1426,63 +1420,106 @@ do
 		local create_entity = surface.create_entity
 		local spawn_per_wave = mod_data.spawn_per_wave
 
-		-- Spawn new enemies
+		-- Set names for enemies
 		biter_data.name = biter_upgrades[enemy_tech_lvl] or biter_upgrades[#biter_upgrades]
-		for _ = 1, spawn_per_wave do
-			biter_pos[1] = random(25000, 25050)
-			biter_pos[2] = random(10, 50)
-			create_entity(biter_data)
-		end
+		spitter_data.name = spitter_upgrades[enemy_tech_lvl] or spitter_upgrades[#spitter_upgrades]
+		worm_data.name = worm_upgrades[enemy_tech_lvl] or worm_upgrades[#worm_upgrades]
 
-		biter_data.name = spitter_upgrades[enemy_tech_lvl] or spitter_upgrades[#spitter_upgrades]
-		for _ = 1, spawn_per_wave do
-			biter_pos[1] = random(25000, 25050)
-			biter_pos[2] = random(10, 50)
-			create_entity(biter_data)
-		end
 		mod_data.spawn_enemy_count = mod_data.spawn_enemy_count + spawn_per_wave * 2
-
-		local enemy_unit_group = mod_data.enemy_unit_group
-		if enemy_unit_group.valid == false then
-			enemy_unit_group = surface.create_unit_group{position={0, 0}, force="enemy"}
+		local spawn_enemy_count = mod_data.spawn_enemy_count
+		if spawn_enemy_count > 200 then
+			spawn_enemy_count = 200
 		end
-		mod_data.enemy_unit_group = enemy_unit_group
 
-		-- Copy and paste enemies
+		-- Spawn enemies
 		local defend_lines_count = mod_data.defend_lines_count
 		local h_size = floor(defend_lines_count/2)
 		local map_border = mod_data.map_size/2
-		local clone_area = surface.clone_area
 		local enemy_expansion_sources = mod_data.enemy_expansion_sources
-		biter_data.name = worm_upgrades[enemy_tech_lvl] or worm_upgrades[#worm_upgrades]
+		biter_pos[1] = map_border + length - 50
+		spitter_pos[1] = map_border + length - 50
+		attack_command_data.target = mod_data.target_entity
+		local half_height = height / 2
 		for i = -h_size, h_size do
 			if mod_data.enemy_expansion_mode then
-				biter_pos[1] = random(map_border + length - 70, map_border + length - 60)
-				biter_pos[2] = random(h_length * i + 10, h_length * i + height - 10)
-				enemy_expansion_sources[#enemy_expansion_sources+1] = create_entity(biter_data)
+				worm_pos[1] = random(map_border + length - 70, map_border + length - 60)
+				worm_pos[2] = random(h_length * i + 10, h_length * i + height - 10)
+				enemy_expansion_sources[#enemy_expansion_sources+1] = create_entity(worm_data)
 			end
-
-			destination_left_top[1] = map_border + length - 60
-			destination_left_top[2] = h_length * i + 10
-			destination_right_bottom[1] = map_border + length - 10
-			destination_right_bottom[2] = h_length * i + height - 10
 
 			if random() <= mod_data.no_enemies_chance then
-			elseif random() <= mod_data.triple_enemy_chance then
-				clone_area(clone_data)
-				clone_area(clone_data)
-				clone_area(clone_data)
-			elseif random() <= mod_data.double_enemy_chance then
-				clone_area(clone_data)
-				clone_area(clone_data)
 			else
-				clone_area(clone_data)
+				local enemy_unit_group = surface.create_unit_group(unit_group_data)
+				local add_member = enemy_unit_group.add_member
+				biter_pos[2] = h_length * i + half_height
+				spitter_pos[2] = h_length * i + half_height
+				if random() <= mod_data.triple_enemy_chance then
+					if spawn_enemy_count > 200 / 3 then
+						local enemy_unit_group2 = surface.create_unit_group(unit_group_data)
+						local add_member2 = enemy_unit_group2.add_member
+						for _=1, spawn_enemy_count do
+							add_member2(create_entity(biter_data))
+							add_member2(create_entity(spitter_data))
+						end
+						-- Command to attack
+						enemy_unit_group2.set_command(attack_command_data)
+
+						enemy_unit_group2 = surface.create_unit_group(unit_group_data)
+						add_member2 = enemy_unit_group2.add_member
+						for _=1, spawn_enemy_count do
+							add_member2(create_entity(biter_data))
+							add_member2(create_entity(spitter_data))
+						end
+						-- Command to attack
+						enemy_unit_group2.set_command(attack_command_data)
+
+						for _=1, spawn_enemy_count do
+							add_member(create_entity(biter_data))
+							add_member(create_entity(spitter_data))
+						end
+					else
+						for _=1, spawn_enemy_count do
+							add_member(create_entity(biter_data))
+							add_member(create_entity(biter_data))
+							add_member(create_entity(biter_data))
+							add_member(create_entity(spitter_data))
+							add_member(create_entity(spitter_data))
+							add_member(create_entity(spitter_data))
+						end
+					end
+				elseif random() <= mod_data.double_enemy_chance then
+					if spawn_enemy_count > 100 then
+						local enemy_unit_group2 = surface.create_unit_group(unit_group_data)
+						add_member2 = enemy_unit_group2.add_member
+						for _=1, spawn_enemy_count do
+							add_member2(create_entity(biter_data))
+							add_member2(create_entity(spitter_data))
+						end
+						-- Command to attack
+						enemy_unit_group2.set_command(attack_command_data)
+
+						for _=1, spawn_enemy_count do
+							add_member(create_entity(biter_data))
+							add_member(create_entity(spitter_data))
+						end
+					else
+						for _=1, spawn_enemy_count do
+							add_member(create_entity(biter_data))
+							add_member(create_entity(biter_data))
+							add_member(create_entity(spitter_data))
+							add_member(create_entity(spitter_data))
+						end
+					end
+				else
+					for _=1, spawn_enemy_count do
+						add_member(create_entity(biter_data))
+						add_member(create_entity(spitter_data))
+					end
+				end
+				-- Command to attack
+				enemy_unit_group.set_command(attack_command_data)
 			end
 		end
-
-		-- Command to attack
-		attack_command_data.target = mod_data.target_entity
-		enemy_unit_group.set_command(attack_command_data)
 
 		game.print({"BiterCraft.new_wave"}, YELLOW_COLOR)
 		update_player_wave_HUD()
@@ -1495,14 +1532,6 @@ function check_map(event)
 	if event.tick < mod_data.generate_new_round_tick then return end
 
 	on_game_created_from_scenario()
-end
-
-local function on_entity_cloned(event)
-	local destination = event.destination
-	if not destination.valid then return end
-	if destination.force.index ~= 2 then return end -- if not enemy force
-
-	mod_data.enemy_unit_group.add_member(destination)
 end
 
 local function on_research_finished(event)
@@ -1642,16 +1671,17 @@ function new_round()
 	game.reset_time_played() -- is this safe?
 
 	local surface = game.get_surface(1)
-	surface.clear(true) --ignores characters
+	surface.clear(true) -- ignores characters
 
 	for _, force in pairs(game.forces) do
 		force.reset()
 		force.reset_evolution() -- is this useful?
 	end
+	game.forces.player.friendly_fire = false
 
 	-- Temporary workaround
 	game.forces.enemy.kill_all_units()
-	local entities = surface.find_entities()
+	local entities = surface.find_entities_filtered{force="enemy"}
 	for i=1, #entities do
 		entities[i].destroy()
 	end
@@ -1682,10 +1712,6 @@ end
 
 
 function add_event_filters()
-	local filters = {
-		{filter = "type", type = "unit"},
-	}
-	script.set_event_filter(defines.events.on_entity_cloned, filters)
 end
 
 
@@ -1708,7 +1734,6 @@ function update_global_data()
 	mod_data.defend_lines_count = mod_data.defend_lines_count or 3
 	mod_data.current_wave = mod_data.current_wave or 0
 	mod_data.tech_price_multiplier = mod_data.tech_price_multiplier or 1
-	mod_data.enemy_unit_group = mod_data.enemy_unit_group or surface.create_unit_group{position={0, 0}, force="enemy"}
 	mod_data.last_wave_tick = mod_data.last_wave_tick or game.tick
 	mod_data.enemies_depends_on_techs = mod_data.enemies_depends_on_techs or false
 	mod_data.is_there_new_tech = mod_data.is_there_new_tech or false
@@ -1753,6 +1778,7 @@ end
 M.add_remote_interface = add_remote_interface
 
 M.on_init = function()
+	game.map_settings.max_failed_behavior_count = 100
 	game.forces.player.friendly_fire = false
 	update_global_data()
 	add_event_filters()
@@ -1781,7 +1807,6 @@ M.events = {
 	[defines.events.on_player_removed] = on_player_removed,
 	[defines.events.on_gui_click] = on_gui_click,
 	[defines.events.on_entity_destroyed] = on_entity_destroyed,
-	[defines.events.on_entity_cloned] = on_entity_cloned,
 	[defines.events.on_research_finished] = on_research_finished,
 	[defines.events.on_market_item_purchased] = on_market_item_purchased
 }
@@ -1791,14 +1816,6 @@ M.on_nth_tick = {
 	[300] = check_map,
 	[60 * 60] = function(event)
 		check_is_settings_set(event)
-
-		if mod_data.generate_new_round then return end
-		-- Command to attack (it's an attempt to fix some bugs)
-		local enemy_unit_group = mod_data.enemy_unit_group
-		if enemy_unit_group.valid then
-			attack_command_data.target = mod_data.target_entity
-			enemy_unit_group.set_command(attack_command_data)
-		end
 	end,
 	[60 * 60 * 1.5] = expand_biters,
 	[60 * 60 * 2] = check_techs,
