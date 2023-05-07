@@ -148,13 +148,13 @@ local function teleport_safely(player, surface, target_position)
 end
 
 function check_player_data()
-	for _, player_index in pairs(mod_data.init_players) do
+	for player_index in pairs(mod_data.init_players) do
 		local player = game.get_player(player_index)
 		if not (player and player.valid) then
 			mod_data.init_players[player_index] = nil
 		end
 	end
-	for _, player_index in pairs(mod_data.player_HUD_data) do
+	for player_index in pairs(mod_data.player_HUD_data) do
 		local player = game.get_player(player_index)
 		if not (player and player.valid and player.connected) then
 			player_HUD_data[player_index] = nil
