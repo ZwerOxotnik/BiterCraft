@@ -279,9 +279,7 @@ function insert_start_items(player)
 		end
 	end
 
-	if car == nil then
-		teleport_safely(player, surface, {0, 0})
-	end
+	teleport_safely(player, surface, {0, 0})
 
 	for _, item_data in pairs(START_PLAYER_ITEMS) do
 		if item_prototypes[item_data.name] then
