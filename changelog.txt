@@ -1,4 +1,10 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.8.10
+Date: 2023-05-07
+  Bugfixes:
+    - Deletes biters on new rounds (it didn't delete for some weird reason)
+    - Teleport players to 0, 0 on new rounds
+---------------------------------------------------------------------------------------------------
 Version: 0.8.9
 Date: 2023-05-07
   Bugfixes:

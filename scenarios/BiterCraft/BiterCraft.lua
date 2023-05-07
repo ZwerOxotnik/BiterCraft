@@ -1115,6 +1115,7 @@ local function on_game_created_from_scenario()
 
 	local player_force = game.forces.player
 	player_force.chart_all(surface)
+	teleport_players(game.players, {0, 0})
 
 	update_player_wave_HUD()
 	print_defend_points()
@@ -1646,6 +1647,13 @@ function new_round()
 	for _, force in pairs(game.forces) do
 		force.reset()
 		force.reset_evolution() -- is this useful?
+	end
+
+	-- Temporary workaround
+	game.forces.enemy.kill_all_units()
+	local entities = surface.find_entities()
+	for i=1, #entities do
+		entities[i].destroy()
 	end
 
 	game.remove_offline_players()
