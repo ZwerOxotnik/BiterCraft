@@ -1,10 +1,17 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.8.9
+Date: 2023-05-07
+  Bugfixes:
+    - New attempt to fix biter attacks for some cases
+  Changes:
+    - Default map size is 2500 instead of 5000 now
+  Info:
+    - I'm sick of car spawn, collision etc. it doesn't work in any way properly
+---------------------------------------------------------------------------------------------------
 Version: 0.8.8
 Date: 2023-05-07
   Bugfixes:
     - Fixed and improved data stability
-  Info:
-    - I'm sick of car spawn, collision etc. it doesn't work in any way properly
 ---------------------------------------------------------------------------------------------------
 Version: 0.8.7
 Date: 2023-05-07

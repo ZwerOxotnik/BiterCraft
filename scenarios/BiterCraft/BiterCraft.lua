@@ -1392,6 +1392,7 @@ function check_techs()
 end
 
 
+local attack_command_data = {type = defines.command.attack, target = nil}
 do
 	local length = 400
 	local h_length = length/2
@@ -1408,7 +1409,6 @@ do
 	}
 	local biter_pos = {0, 0}
 	local biter_data = {name = "", force = "enemy", position = biter_pos}
-	local command_data = {type = defines.command.attack, target = nil}
 	function start_new_wave(event)
 		if not event.ignore_time and event.tick < mod_data.last_wave_tick + (60 * 60 * 4) then
 			return
@@ -1480,8 +1480,8 @@ do
 		end
 
 		-- Command to attack
-		command_data.target = mod_data.target_entity
-		enemy_unit_group.set_command(command_data)
+		attack_command_data.target = mod_data.target_entity
+		enemy_unit_group.set_command(attack_command_data)
 
 		game.print({"BiterCraft.new_wave"}, YELLOW_COLOR)
 		update_player_wave_HUD()
@@ -1695,7 +1695,7 @@ function update_global_data()
 	mod_data = global.BiterCraft
 	mod_data.main_market_indexes = mod_data.main_market_indexes or {}
 	mod_data.bonuses = mod_data.bonuses or {}
-	mod_data.map_size = mod_data.map_size or 5000
+	mod_data.map_size = mod_data.map_size or 2500
 	mod_data.next_map_size = mod_data.next_map_size or mod_data.map_size
 	mod_data.defend_lines_count = mod_data.defend_lines_count or 3
 	mod_data.current_wave = mod_data.current_wave or 0
@@ -1781,7 +1781,17 @@ M.events = {
 M.on_nth_tick = {
 	[60] = update_player_time_HUD,
 	[300] = check_map,
-	[60 * 60] = check_is_settings_set,
+	[60 * 60] = function(event)
+		check_is_settings_set(event)
+
+		if mod_data.generate_new_round then return end
+		-- Command to attack (it's an attempt to fix some bugs)
+		local enemy_unit_group = mod_data.enemy_unit_group
+		if enemy_unit_group.valid then
+			attack_command_data.target = mod_data.target_entity
+			enemy_unit_group.set_command(attack_command_data)
+		end
+	end,
 	[60 * 60 * 1.5] = expand_biters,
 	[60 * 60 * 2] = check_techs,
 	[60 * 60 * 5] = start_new_wave,
