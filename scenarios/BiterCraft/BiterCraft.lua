@@ -1452,29 +1452,22 @@ do
 				biter_pos[2] = h_length * i + half_height
 				spitter_pos[2] = h_length * i + half_height
 				if random() <= mod_data.triple_enemy_chance then
-					if spawn_enemy_count > 200 / 3 then
+					if spawn_enemy_count >= 200 / 3 then
 						local enemy_unit_group2 = surface.create_unit_group(unit_group_data)
 						local add_member2 = enemy_unit_group2.add_member
-						for _=1, spawn_enemy_count do
-							add_member2(create_entity(biter_data))
-							add_member2(create_entity(spitter_data))
-						end
-						-- Command to attack
-						enemy_unit_group2.set_command(attack_command_data)
-
-						enemy_unit_group2 = surface.create_unit_group(unit_group_data)
-						add_member2 = enemy_unit_group2.add_member
-						for _=1, spawn_enemy_count do
-							add_member2(create_entity(biter_data))
-							add_member2(create_entity(spitter_data))
-						end
-						-- Command to attack
-						enemy_unit_group2.set_command(attack_command_data)
-
+						local enemy_unit_group3 = surface.create_unit_group(unit_group_data)
+						local add_member3 = enemy_unit_group2.add_member
 						for _=1, spawn_enemy_count do
 							add_member(create_entity(biter_data))
 							add_member(create_entity(spitter_data))
+							add_member2(create_entity(biter_data))
+							add_member2(create_entity(spitter_data))
+							add_member3(create_entity(biter_data))
+							add_member3(create_entity(spitter_data))
 						end
+						-- Command to attack
+						enemy_unit_group2.set_command(attack_command_data)
+						enemy_unit_group3.set_command(attack_command_data)
 					else
 						for _=1, spawn_enemy_count do
 							add_member(create_entity(biter_data))
@@ -1486,20 +1479,17 @@ do
 						end
 					end
 				elseif random() <= mod_data.double_enemy_chance then
-					if spawn_enemy_count > 100 then
+					if spawn_enemy_count >= 100 then
 						local enemy_unit_group2 = surface.create_unit_group(unit_group_data)
 						add_member2 = enemy_unit_group2.add_member
 						for _=1, spawn_enemy_count do
+							add_member(create_entity(biter_data))
+							add_member(create_entity(spitter_data))
 							add_member2(create_entity(biter_data))
 							add_member2(create_entity(spitter_data))
 						end
 						-- Command to attack
 						enemy_unit_group2.set_command(attack_command_data)
-
-						for _=1, spawn_enemy_count do
-							add_member(create_entity(biter_data))
-							add_member(create_entity(spitter_data))
-						end
 					else
 						for _=1, spawn_enemy_count do
 							add_member(create_entity(biter_data))
@@ -1534,6 +1524,7 @@ end
 
 local function on_research_finished(event)
 	if mod_data.generate_new_round then return end
+	if not mod_data.is_settings_set then return end
 	local force = event.research.force
 	if not (force and force.valid) then return end
 	if force.name ~= "player" then return end
