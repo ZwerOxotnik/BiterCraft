@@ -1628,7 +1628,7 @@ commands.add_command("tp", {"BiterCraft-commands.tp"}, function(cmd)
 		return
 	end
 
-	local target_player = game.get_player(cmd.player_index)
+	local target_player = game.get_player(cmd.parameter)
 	if not (target_player and target_player.valid and player.connected) then return end
 	if target_player == player then return end
 

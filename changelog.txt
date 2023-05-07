@@ -1,10 +1,15 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.8.7
+Date: 2023-05-07
+  Bugfixes:
+    - Fixed "/tp nickname" command
+  Info:
+    - I'm sick of car spawn, collision etc. it doesn't work in any way properly
+---------------------------------------------------------------------------------------------------
 Version: 0.8.6
 Date: 2023-05-07
   Bugfixes:
     - Fixed losing of main target for biters
-  Info:
-    - I'm sick of car spawn, collision etc. it doesn't work in any way properly
 ---------------------------------------------------------------------------------------------------
 Version: 0.8.5
 Date: 2023-05-07
