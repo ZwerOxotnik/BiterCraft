@@ -1664,6 +1664,7 @@ function new_round()
 	mod_data.is_there_new_tech = false
 	mod_data.generate_new_round_tick = game.tick + 300
 	mod_data.main_market = nil
+	mod_data.current_wave = 0
 end
 
 
