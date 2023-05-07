@@ -1441,8 +1441,10 @@ do
 		end
 		mod_data.spawn_enemy_count = mod_data.spawn_enemy_count + spawn_per_wave * 2
 
-		-- TODO: change it?
-		local enemy_unit_group = surface.create_unit_group{position={0, 0}, force="enemy"}
+		local enemy_unit_group = mod_data.enemy_unit_group
+		if enemy_unit_group.valid == false then
+			enemy_unit_group = surface.create_unit_group{position={0, 0}, force="enemy"}
+		end
 		mod_data.enemy_unit_group = enemy_unit_group
 
 		-- Copy and paste enemies
