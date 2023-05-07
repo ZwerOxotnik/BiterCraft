@@ -850,9 +850,9 @@ end
 function create_info_HUD(player)
 	local screen = player.gui.screen
 	local prev_location
-	if screen.BC_info_UI_frame then
-		prev_location = screen.BC_info_UI_frame.location
-		screen.BC_info_UI_frame.destroy()
+	if screen.BC_info_HUD_frame then
+		prev_location = screen.BC_info_HUD_frame.location
+		screen.BC_info_HUD_frame.destroy()
 	end
 
 	local main_frame = screen.add{type = "frame", name = "BC_info_HUD_frame", direction = "horizontal"}
