@@ -164,7 +164,7 @@ end
 
 function apply_bonuses()
 	local player_force = game.forces.player
-	player_force.manual_mining_speed_modifier = 50
+	player_force.manual_mining_speed_modifier = 40
 	player_force.manual_crafting_speed_modifier = 20
 	player_force.laboratory_speed_modifier = 4
 	player_force.worker_robots_speed_modifier = 2
@@ -174,7 +174,7 @@ function apply_bonuses()
 	player_force.character_resource_reach_distance_bonus = 20
 	player_force.character_item_pickup_distance_bonus = 2
 	player_force.character_inventory_slots_bonus = 20
-	player_force.mining_drill_productivity_bonus = 100
+	-- player_force.mining_drill_productivity_bonus = 100
 	player_force.character_health_bonus = 200
 end
 
@@ -1720,7 +1720,7 @@ function update_global_data()
 	mod_data.bonuses = mod_data.bonuses or {}
 	mod_data.map_size = mod_data.map_size or 2500
 	mod_data.next_map_size = mod_data.next_map_size or mod_data.map_size
-	mod_data.defend_lines_count = mod_data.defend_lines_count or 3
+	mod_data.defend_lines_count = mod_data.defend_lines_count or 4
 	mod_data.current_wave = mod_data.current_wave or 0
 	mod_data.tech_price_multiplier = mod_data.tech_price_multiplier or 1
 	mod_data.last_wave_tick = mod_data.last_wave_tick or game.tick
@@ -1749,7 +1749,7 @@ function update_global_data()
 	end
 	mod_data.double_enemy_chance = mod_data.double_enemy_chance or 0.1
 	mod_data.triple_enemy_chance = mod_data.triple_enemy_chance or 0
-	mod_data.no_enemies_chance = mod_data.no_enemies_chance or 0
+	mod_data.no_enemies_chance = mod_data.no_enemies_chance or 0.2
 	mod_data.new_wave_on_new_tech = mod_data.new_wave_on_new_tech or false
 	mod_data.is_map_filled_with_water = mod_data.is_map_filled_with_water or false
 
