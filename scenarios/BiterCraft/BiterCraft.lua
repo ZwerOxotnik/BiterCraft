@@ -1401,7 +1401,8 @@ do
 	local biter_pos = {0, 0}
 	local spitter_pos = {0, 0}
 	local worm_pos = {0, 0}
-	local unit_group_data = {position={0, 0}, force="enemy"}
+	local unit_group_position = {0, 0}
+	local unit_group_data = {position=unit_group_position, force="enemy"}
 	local biter_data   = {name = "", force = "enemy", position = biter_pos}
 	local spitter_data = {name = "", force = "enemy", position = spitter_pos}
 	local worm_data = {name = "", force = "enemy", position = worm_pos}
@@ -1437,8 +1438,9 @@ do
 		local h_size = floor(defend_lines_count/2)
 		local map_border = mod_data.map_size/2
 		local enemy_expansion_sources = mod_data.enemy_expansion_sources
-		biter_pos[1] = map_border + length - 50
+		biter_pos[1]   = map_border + length - 50
 		spitter_pos[1] = map_border + length - 50
+		unit_group_position[1] = map_border + length - 50
 		attack_command_data.target = mod_data.target_entity
 		local half_height = height / 2
 		for i = -h_size, h_size do
@@ -1450,65 +1452,72 @@ do
 
 			if random() <= mod_data.no_enemies_chance then
 			else
-				local enemy_unit_group = surface.create_unit_group(unit_group_data)
-				local add_member = enemy_unit_group.add_member
-				biter_pos[2] = h_length * i + half_height
+				biter_pos[2]   = h_length * i + half_height
 				spitter_pos[2] = h_length * i + half_height
+				unit_group_position[2] = h_length * i + half_height
+				local enemy_unit_group  = surface.create_unit_group(unit_group_data)
+				local enemy_unit_group2 = surface.create_unit_group(unit_group_data)
+				local add_member = enemy_unit_group.add_member
+				local add_member2 = enemy_unit_group2.add_member
 				if random() <= mod_data.triple_enemy_chance then
 					if spawn_enemy_count >= 200 / 3 then
-						local enemy_unit_group2 = surface.create_unit_group(unit_group_data)
-						local add_member2 = enemy_unit_group2.add_member
 						local enemy_unit_group3 = surface.create_unit_group(unit_group_data)
-						local add_member3 = enemy_unit_group2.add_member
+						local add_member3 = enemy_unit_group3.add_member
+						local enemy_unit_group4 = surface.create_unit_group(unit_group_data)
+						local add_member4 = enemy_unit_group4.add_member
 						for _=1, spawn_enemy_count do
 							add_member(create_entity(biter_data))
-							add_member(create_entity(spitter_data))
-							add_member2(create_entity(biter_data))
 							add_member2(create_entity(spitter_data))
 							add_member3(create_entity(biter_data))
-							add_member3(create_entity(spitter_data))
+							add_member3(create_entity(biter_data))
+							add_member4(create_entity(spitter_data))
+							add_member4(create_entity(spitter_data))
 						end
 						-- Command to attack
-						enemy_unit_group2.set_command(attack_command_data)
 						enemy_unit_group3.set_command(attack_command_data)
+						enemy_unit_group4.set_command(attack_command_data)
 					else
 						for _=1, spawn_enemy_count do
 							add_member(create_entity(biter_data))
 							add_member(create_entity(biter_data))
 							add_member(create_entity(biter_data))
-							add_member(create_entity(spitter_data))
-							add_member(create_entity(spitter_data))
-							add_member(create_entity(spitter_data))
+							add_member2(create_entity(spitter_data))
+							add_member2(create_entity(spitter_data))
+							add_member2(create_entity(spitter_data))
 						end
 					end
 				elseif random() <= mod_data.double_enemy_chance then
 					if spawn_enemy_count >= 100 then
-						local enemy_unit_group2 = surface.create_unit_group(unit_group_data)
-						add_member2 = enemy_unit_group2.add_member
+						local enemy_unit_group3 = surface.create_unit_group(unit_group_data)
+						add_member3 = enemy_unit_group3.add_member
+						local enemy_unit_group4 = surface.create_unit_group(unit_group_data)
+						add_member4 = enemy_unit_group4.add_member
 						for _=1, spawn_enemy_count do
 							add_member(create_entity(biter_data))
-							add_member(create_entity(spitter_data))
-							add_member2(create_entity(biter_data))
 							add_member2(create_entity(spitter_data))
+							add_member3(create_entity(biter_data))
+							add_member4(create_entity(spitter_data))
 						end
 						-- Command to attack
-						enemy_unit_group2.set_command(attack_command_data)
+						enemy_unit_group3.set_command(attack_command_data)
+						enemy_unit_group4.set_command(attack_command_data)
 					else
 						for _=1, spawn_enemy_count do
 							add_member(create_entity(biter_data))
 							add_member(create_entity(biter_data))
-							add_member(create_entity(spitter_data))
-							add_member(create_entity(spitter_data))
+							add_member2(create_entity(spitter_data))
+							add_member2(create_entity(spitter_data))
 						end
 					end
 				else
 					for _=1, spawn_enemy_count do
 						add_member(create_entity(biter_data))
-						add_member(create_entity(spitter_data))
+						add_member2(create_entity(spitter_data))
 					end
 				end
 				-- Command to attack
 				enemy_unit_group.set_command(attack_command_data)
+				enemy_unit_group2.set_command(attack_command_data)
 			end
 		end
 
@@ -1721,7 +1730,7 @@ function update_global_data()
 	mod_data = global.BiterCraft
 	mod_data.main_market_indexes = mod_data.main_market_indexes or {}
 	mod_data.bonuses = mod_data.bonuses or {}
-	mod_data.map_size = mod_data.map_size or 2500
+	mod_data.map_size = mod_data.map_size or 2000
 	mod_data.next_map_size = mod_data.next_map_size or mod_data.map_size
 	mod_data.defend_lines_count = mod_data.defend_lines_count or 4
 	mod_data.current_wave = mod_data.current_wave or 0
@@ -1752,7 +1761,7 @@ function update_global_data()
 	end
 	mod_data.double_enemy_chance = mod_data.double_enemy_chance or 0.1
 	mod_data.triple_enemy_chance = mod_data.triple_enemy_chance or 0
-	mod_data.no_enemies_chance = mod_data.no_enemies_chance or 0.2
+	mod_data.no_enemies_chance = mod_data.no_enemies_chance or 0.3
 	mod_data.new_wave_on_new_tech = mod_data.new_wave_on_new_tech or false
 	mod_data.is_map_filled_with_water = mod_data.is_map_filled_with_water or false
 

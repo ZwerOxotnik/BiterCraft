@@ -1,4 +1,11 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.9.6
+Date: 2023-05-08
+  Changes:
+    - Default map size is 2000
+  Bugfixes:
+    - Improved biters behaviour
+---------------------------------------------------------------------------------------------------
 Version: 0.9.5
 Date: 2023-05-08
   Changes:
@@ -23,7 +30,7 @@ Date: 2023-05-08
 Version: 0.9.1
 Date: 2023-05-07
   Bugfixes:
-    - Fixed bitters spawn because of techs on new rounds
+    - Fixed biters spawn because of techs on new rounds
 ---------------------------------------------------------------------------------------------------
 Version: 0.9.0
 Date: 2023-05-07
