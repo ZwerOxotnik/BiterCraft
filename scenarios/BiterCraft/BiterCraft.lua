@@ -176,7 +176,7 @@ function apply_bonuses()
 	player_force.character_inventory_slots_bonus = 20
 	-- player_force.mining_drill_productivity_bonus = 100
 	player_force.character_health_bonus = 200
-	player_force.set_ammo_damage_modifier("flamethrower", -0.6)
+	player_force.set_ammo_damage_modifier("flamethrower", -0.9)
 end
 
 function research_techs()
