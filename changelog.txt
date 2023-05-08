@@ -1,4 +1,16 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.9.9
+Date: 2023-05-08
+  Features:
+    - Added new setting for random building attack
+    - Added new setting "Manual crafting speed modifier"
+  Changes:
+    - Max amount of biters on one line is 300 per wave (when they are tripled)
+    - Default map size is 1500
+    - Added wood in the market
+    - Removed wood from start chests
+    - Better start gear
+---------------------------------------------------------------------------------------------------
 Version: 0.9.8
 Date: 2023-05-08
   Changes:
@@ -55,7 +67,7 @@ Date: 2023-05-07
     - Biters behaviour is much more stable
   Changes:
     - 6 times more free energy
-    - Max amount of biters spawned in one line is 600 (when they are tripled)
+    - Max amount of biters on one line is 600 per wave (when they are tripled)
 ---------------------------------------------------------------------------------------------------
 Version: 0.8.10
 Date: 2023-05-07

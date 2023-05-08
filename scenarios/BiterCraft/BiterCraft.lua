@@ -165,7 +165,7 @@ end
 function apply_bonuses()
 	local player_force = game.forces.player
 	player_force.manual_mining_speed_modifier = 10
-	player_force.manual_crafting_speed_modifier = 5
+	player_force.manual_crafting_speed_modifier = mod_data.manual_crafting_speed_modifier
 	player_force.laboratory_speed_modifier = 4
 	player_force.worker_robots_speed_modifier = 2
 	player_force.character_build_distance_bonus = 20
@@ -269,7 +269,7 @@ function insert_start_items(player)
 
 			local fuel_name = "wood"
 			if item_prototypes[fuel_name] then
-				local stack = {name = fuel_name, count = 600}
+				local stack = {name = fuel_name, count = 100}
 				car.insert(stack)
 			end
 		else
@@ -916,6 +916,9 @@ local function create_lobby_settings_GUI(player)
 	textfield_content.add(LABEL).caption = {'', "Technology price multiplier", COLON}
 	textfield_content.add{type = "textfield", name = "BC_tech_price_multiplier_textfield", text = mod_data.technology_price_multiplier or 1, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
 
+	textfield_content.add(LABEL).caption = {'', "Manual crafting speed modifier", COLON} -- TODO: FIX locale
+	textfield_content.add{type = "textfield", name = "BC_manual_crafting_speed_modifier_textfield", text = mod_data.manual_crafting_speed_modifier or 5, numeric = true, allow_decimal = true, allow_negative = false}.style.maximal_width = 70
+
 	textfield_content.add(LABEL).caption = {'', {"BiterCraft-settings.no_enemies_chance"}, COLON}
 	number = mod_data.no_enemies_chance * 100
 	if number < 0 then
@@ -986,6 +989,10 @@ local function create_lobby_settings_GUI(player)
 	local BC_is_always_day_flow = main_frame.add{type = "flow", name = "BC_is_always_day_flow"}
 	BC_is_always_day_flow.add(LABEL).caption = {'', "Is always day", COLON}
 	BC_is_always_day_flow.add{type = "checkbox", name = "BC_is_always_day_checkbox", state = mod_data.is_always_day or false}
+
+	local BC_is_attack_random_building_flow = main_frame.add{type = "flow", name = "BC_is_attack_random_building_flow"}
+	BC_is_attack_random_building_flow.add(LABEL).caption = {'', "Does bitter attack random building", COLON}
+	BC_is_attack_random_building_flow.add{type = "checkbox", name = "BC_is_attack_random_building_checkbox", state = mod_data.is_attack_random_building or false}
 
 	-- local PvP_attacks_flow = main_frame.add{type = "flow", name = "BC_PvP_attacks_flow"}
 	-- PvP_attacks_flow.add(LABEL).caption = {'', "Players attacks", COLON}
@@ -1143,6 +1150,7 @@ local GUIS = {
 			local main_frame = player.gui.center.BC_lobby_settings_frame
 			local textfield_content = main_frame.BC_textfield_content
 			local tech_price_multiplier_textfield = textfield_content.BC_tech_price_multiplier_textfield
+			local manual_crafting_speed_modifier_textfield = textfield_content.BC_manual_crafting_speed_modifier_textfield
 			local no_enemies_chance_textfield = textfield_content.BC_no_enemies_chance_textfield
 			local double_enemy_chance_textfield = textfield_content.BC_double_enemy_chance_textfield
 			local triple_enemy_chance_textfield = textfield_content.BC_triple_enemy_chance_textfield
@@ -1150,7 +1158,7 @@ local GUIS = {
 
 			local tech_price_multiplier = tonumber(tech_price_multiplier_textfield.text) or 1
 			if tech_price_multiplier == 0 then
-			tech_price_multiplier = 1
+				tech_price_multiplier = 1
 			elseif tech_price_multiplier < 0.001 then
 				tech_price_multiplier = 0.001
 			elseif tech_price_multiplier > 1000 then
@@ -1158,6 +1166,15 @@ local GUIS = {
 			end
 			mod_data.tech_price_multiplier = tech_price_multiplier
 			game.difficulty_settings.technology_price_multiplier = mod_data.tech_price_multiplier
+
+			local manual_crafting_speed_modifier = tonumber(manual_crafting_speed_modifier_textfield.text) or 0
+			if manual_crafting_speed_modifier < 0.001 then
+				manual_crafting_speed_modifier = 0.001
+			elseif manual_crafting_speed_modifier > 1000 then
+				manual_crafting_speed_modifier = 1000
+			end
+			mod_data.manual_crafting_speed_modifier = manual_crafting_speed_modifier
+			game.forces.player.manual_crafting_speed_modifier = mod_data.manual_crafting_speed_modifier
 
 			local double_enemy_chance = tonumber(double_enemy_chance_textfield.text) or 0
 			if double_enemy_chance <= 0  then
@@ -1201,6 +1218,9 @@ local GUIS = {
 			mod_data.is_always_day = is_always_day_checkbox.state
 			surface.always_day = mod_data.is_always_day
 
+			local BC_is_attack_random_building_checkbox = main_frame.BC_is_attack_random_building_flow.BC_is_attack_random_building_checkbox
+			mod_data.is_attack_random_building = BC_is_attack_random_building_checkbox.state
+
 			local fill_water_checkbox = main_frame.BC_fill_water_flow.BC_fill_water_checkbox
 			mod_data.is_map_filled_with_water = fill_water_checkbox.state
 
@@ -1230,6 +1250,7 @@ local GUIS = {
 			local textfield_content = main_frame.BC_textfield_content
 			local defend_lines_textfield = textfield_content.BC_defend_lines_textfield
 			local tech_price_multiplier_textfield = textfield_content.BC_tech_price_multiplier_textfield
+			local manual_crafting_speed_modifier_textfield = textfield_content.BC_manual_crafting_speed_modifier_textfield
 			local no_enemies_chance_textfield = textfield_content.BC_no_enemies_chance_textfield
 			local double_enemy_chance_textfield = textfield_content.BC_double_enemy_chance_textfield
 			local triple_enemy_chance_textfield = textfield_content.BC_triple_enemy_chance_textfield
@@ -1251,6 +1272,15 @@ local GUIS = {
 				tech_price_multiplier = 1000
 			end
 			mod_data.tech_price_multiplier = tech_price_multiplier
+
+			local manual_crafting_speed_modifier = tonumber(manual_crafting_speed_modifier_textfield.text) or 0
+			if manual_crafting_speed_modifier < 0.001 then
+				manual_crafting_speed_modifier = 0.001
+			elseif manual_crafting_speed_modifier > 1000 then
+				manual_crafting_speed_modifier = 1000
+			end
+			mod_data.manual_crafting_speed_modifier = manual_crafting_speed_modifier
+			game.forces.player.manual_crafting_speed_modifier = mod_data.manual_crafting_speed_modifier
 
 			local double_enemy_chance = tonumber(double_enemy_chance_textfield.text) or 0
 			if double_enemy_chance <= 0  then
@@ -1288,11 +1318,14 @@ local GUIS = {
 			local is_always_day_checkbox = main_frame.BC_is_always_day_flow.BC_is_always_day_checkbox
 			mod_data.is_always_day = is_always_day_checkbox.state
 
+			local is_attack_random_building_checkbox = main_frame.BC_is_attack_random_building_flow.BC_is_attack_random_building_checkbox
+			mod_data.is_attack_random_building = is_attack_random_building_checkbox.state
+
 			local enemies_depends_on_techs_checkbox = main_frame.BC_enemies_depends_on_techs_flow.BC_enemies_depends_on_techs_checkbox
 			mod_data.enemies_depends_on_techs = enemies_depends_on_techs_checkbox.state
 
-			local BC_new_wave_on_new_tech_checkbox = main_frame.BC_new_wave_on_new_tech_flow.BC_new_wave_on_new_tech_checkbox
-			mod_data.new_wave_on_new_tech = BC_new_wave_on_new_tech_checkbox.state
+			local new_wave_on_new_tech_checkbox = main_frame.BC_new_wave_on_new_tech_flow.BC_new_wave_on_new_tech_checkbox
+			mod_data.new_wave_on_new_tech = new_wave_on_new_tech_checkbox.state
 
 			local enemy_expansion_mode_checkbox = main_frame.BC_enemy_expansion_mode_flow.BC_enemy_expansion_mode_checkbox
 			mod_data.enemy_expansion_mode = enemy_expansion_mode_checkbox.state
@@ -1433,15 +1466,20 @@ do
 		end
 		mod_data.spawn_enemy_count = mod_data.spawn_enemy_count + spawn_per_wave
 		local spawn_enemy_count = mod_data.spawn_enemy_count
-		if spawn_enemy_count > 200 then
-			spawn_enemy_count = 200
+		if spawn_enemy_count > 100 then
+			spawn_enemy_count = 100
 		end
+
 
 		-- Spawn enemies
 		local defend_lines_count = mod_data.defend_lines_count
 		local h_size = floor(defend_lines_count/2)
 		local map_border = mod_data.map_size/2
 		local enemy_expansion_sources = mod_data.enemy_expansion_sources
+		local player_entites
+		if mod_data.is_attack_random_building then
+			player_entites = surface.find_entities_filtered{force="player"}
+		end
 		biter_pos[1]   = map_border + length - 50
 		spitter_pos[1] = map_border + length - 50
 		unit_group_position[1] = map_border + length - 50
@@ -1478,7 +1516,13 @@ do
 							add_member4(create_entity(spitter_data))
 						end
 						-- Command to attack
+						if player_entites then
+							attack_command_data.target = player_entites[math.random(1, #player_entites)]
+						end
 						enemy_unit_group3.set_command(attack_command_data)
+						if player_entites then
+							attack_command_data.target = player_entites[math.random(1, #player_entites)]
+						end
 						enemy_unit_group4.set_command(attack_command_data)
 					else
 						for _=1, spawn_enemy_count do
@@ -1503,7 +1547,13 @@ do
 							add_member4(create_entity(spitter_data))
 						end
 						-- Command to attack
+						if player_entites then
+							attack_command_data.target = player_entites[math.random(1, #player_entites)]
+						end
 						enemy_unit_group3.set_command(attack_command_data)
+						if player_entites then
+							attack_command_data.target = player_entites[math.random(1, #player_entites)]
+						end
 						enemy_unit_group4.set_command(attack_command_data)
 					else
 						for _=1, spawn_enemy_count do
@@ -1520,7 +1570,13 @@ do
 					end
 				end
 				-- Command to attack
+				if player_entites then
+					attack_command_data.target = player_entites[math.random(1, #player_entites)]
+				end
 				enemy_unit_group.set_command(attack_command_data)
+				if player_entites then
+					attack_command_data.target = player_entites[math.random(1, #player_entites)]
+				end
 				enemy_unit_group2.set_command(attack_command_data)
 			end
 		end
@@ -1734,11 +1790,12 @@ function update_global_data()
 	mod_data = global.BiterCraft
 	mod_data.main_market_indexes = mod_data.main_market_indexes or {}
 	mod_data.bonuses = mod_data.bonuses or {}
-	mod_data.map_size = mod_data.map_size or 2000
+	mod_data.map_size = mod_data.map_size or 1500
 	mod_data.next_map_size = mod_data.next_map_size or mod_data.map_size
-	mod_data.defend_lines_count = mod_data.defend_lines_count or 4
+	mod_data.defend_lines_count = mod_data.defend_lines_count or 5
 	mod_data.current_wave = mod_data.current_wave or 0
 	mod_data.tech_price_multiplier = mod_data.tech_price_multiplier or 1
+	mod_data.manual_crafting_speed_modifier = mod_data.manual_crafting_speed_modifier or 5
 	mod_data.last_wave_tick = mod_data.last_wave_tick or game.tick
 	mod_data.enemies_depends_on_techs = mod_data.enemies_depends_on_techs or false
 	mod_data.is_there_new_tech = mod_data.is_there_new_tech or false
@@ -1746,6 +1803,7 @@ function update_global_data()
 	mod_data.is_settings_set = mod_data.is_settings_set or false
 	mod_data.is_research_all = mod_data.is_research_all or false
 	mod_data.is_always_day = mod_data.is_always_day or false
+	mod_data.is_attack_random_building = mod_data.is_attack_random_building or false
 	if mod_data.enemy_expansion_mode == nil then
 		mod_data.enemy_expansion_mode = mod_data.infection_mode or false
 		mod_data.infection_mode = nil

@@ -6,4 +6,5 @@ return {
 	{price={{"logistic-science-pack", 500}}, offer={type="character-inventory-slots-bonus", modifier=1}},
 	{price={{"iron-plate", 500}}, offer={type="give-item", item="car"}},
 	{price={{"iron-plate", 100}}, offer={type="give-item", item="rocket-fuel"}},
+	{price={{"iron-plate", 1}}, offer={type="give-item", item="wood"}},
 }
