@@ -164,8 +164,8 @@ end
 
 function apply_bonuses()
 	local player_force = game.forces.player
-	player_force.manual_mining_speed_modifier = 40
-	player_force.manual_crafting_speed_modifier = 20
+	player_force.manual_mining_speed_modifier = 10
+	player_force.manual_crafting_speed_modifier = 5
 	player_force.laboratory_speed_modifier = 4
 	player_force.worker_robots_speed_modifier = 2
 	player_force.character_build_distance_bonus = 20
