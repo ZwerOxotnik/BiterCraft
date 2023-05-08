@@ -787,6 +787,7 @@ local function create_resources()
 
 	-- Oil between ore patches
 	start_x = -map_size / 2 + 100 + 65
+	resource_data.amount = 12000
 	resource_data.name = "crude-oil"
 	for _ = 1, resource_count - 1 do
 		start_x = start_x + 100
@@ -797,6 +798,7 @@ local function create_resources()
 			create_entity(resource_data)
 		end
 	end
+	resource_data.amount = 4294967295
 
 	-- Copy and paste ores ad oil
 	start_x = -map_size / 2 + 100
