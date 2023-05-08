@@ -362,6 +362,7 @@ do
 		end
 
 		mod_data.enemy_tech_lvl = mod_data.enemy_tech_lvl + 1
+		mod_data.spawn_enemy_count = 10
 		mod_data.spawn_per_wave = 1
 
 		local create_entity = surface.create_entity
@@ -1427,7 +1428,10 @@ do
 		spitter_data.name = spitter_upgrades[enemy_tech_lvl] or spitter_upgrades[#spitter_upgrades]
 		worm_data.name = worm_upgrades[enemy_tech_lvl] or worm_upgrades[#worm_upgrades]
 
-		mod_data.spawn_enemy_count = mod_data.spawn_enemy_count + spawn_per_wave * 2
+		if mod_data.spawn_enemy_count >= 100 then
+			upgrade_biters()
+		end
+		mod_data.spawn_enemy_count = mod_data.spawn_enemy_count + spawn_per_wave
 		local spawn_enemy_count = mod_data.spawn_enemy_count
 		if spawn_enemy_count > 200 then
 			spawn_enemy_count = 200
@@ -1822,6 +1826,7 @@ M.on_nth_tick = {
 	[60 * 60 * 2] = check_techs,
 	[60 * 60 * 5] = start_new_wave,
 	[60 * 60 * 10] = function(event)
+		if mod_data.spawn_per_wave >= 10 then return end
 		if event.tick < mod_data.last_wave_tick + (60 * 60 * 5) then
 			return
 		end
