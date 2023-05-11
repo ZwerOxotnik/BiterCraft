@@ -1,4 +1,13 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.11.0
+Date: 2023-05-11
+  Changes:
+    - Ore patches are smaller, but more frequent and closer
+    - Biters doesn't evolve so quick because of time
+    - Added piercing rounds magazines to the market
+    - Added gun turrets to the market
+    - Fewer places of water
+---------------------------------------------------------------------------------------------------
 Version: 0.10.0
 Date: 2023-05-09
   Changes:

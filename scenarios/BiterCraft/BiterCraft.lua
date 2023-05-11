@@ -408,12 +408,11 @@ local function generate_map_territory()
 			end
 		end
 	end
-	surface.set_tiles(tiles, false, false, false)
 
 	-- Set water tiles
 	c = 0
-	for i = -51, -48 do
-		for j = -51, -48 do
+	for i = -88, -86 do
+		for j = -88, -86 do
 			c = c + 1
 			tiles[c] = {position = {i, j}, name = "water"}
 		end
@@ -470,7 +469,7 @@ function fill_map_with_water()
 	local surface = game.get_surface(1)
 	local tiles = {}
 
-	-- Set refined-concrete tiles
+	-- Set water tiles
 	local c = 0
 	for i = 1, half_size - 150 do
 		c = c + 1
@@ -487,7 +486,7 @@ function fill_map_with_water()
 	surface.clone_area{
 		source_area = {
 			left_top = {x = -half_size, y = -half_size},
-			right_bottom = {x = -half_size+1, y = -150}
+			right_bottom = {x = -half_size + 1, y = -150}
 		},
 		destination_area = {
 			left_top = {x = -half_size + 1, y = -half_size},
@@ -748,88 +747,91 @@ local function create_resources()
 	local position = {0, 0}
 	local resource_data = {name="", amount=4294967295, snap_to_tile_center=true, position=position}
 
-	local start_x = -map_size / 2 + 100
-	local start_y = -100
+	local resourse_size = 15
+	local distance_between_resourses = 15
+	local occupied_distance = resourse_size + distance_between_resourses
+	local init_start_x = -map_size / 2 + 45
+	local start_x = init_start_x
+	local init_start_y = -45
+	local start_y = init_start_y
 
 	local function create_resourse_zones()
-		for x = 0, 9 do
-			for y = 0, 9 do
+		for x = 0, resourse_size do
+			for y = 0, resourse_size do
 				position[1] = start_x + x
 				position[2] = start_y + y
 				create_entity(resource_data)
 			end
 		end
 
-		source_left_top[1] = start_x
-		source_left_top[2] = start_y
-		source_right_bottom[1] = start_x + 10
-		source_right_bottom[2] = start_y + 10
-		for x = 0, 2 do
-			destination_left_top[1] = start_x + (x * 10)
-			destination_right_bottom[1] = start_x + (x * 10) + 10
-			for y = 0, 2 do
-				if x ~= 0 or y ~= 0 then
-					destination_left_top[2] = start_y + (y * 10)
-					destination_right_bottom[2] = start_y + (y * 10) + 10
-					clone_area(clone_data)
-				end
-			end
-		end
+		-- source_left_top[1] = start_x
+		-- source_left_top[2] = start_y
+		-- source_right_bottom[1] = start_x + resourse_size
+		-- source_right_bottom[2] = start_y + resourse_size
+		-- for x = 0, 2 do
+		-- 	destination_left_top[1] = start_x + (x * resourse_size)
+		-- 	destination_right_bottom[1] = start_x + (x * resourse_size) + resourse_size
+		-- 	for y = 0, 2 do
+		-- 		if x ~= 0 or y ~= 0 then
+		-- 			destination_left_top[2] = start_y + (y * resourse_size)
+		-- 			destination_right_bottom[2] = start_y + (y * resourse_size) + resourse_size
+		-- 			clone_area(clone_data)
+		-- 		end
+		-- 	end
+		-- end
 	end
 
 	local resource_count = 0
 	for _, prototype in pairs(game.entity_prototypes) do
 		if prototype.type == "resource" and prototype.name ~= "crude-oil" then
 			resource_count = resource_count + 1
-			start_x = start_x + 100
+			start_x = start_x + resourse_size + distance_between_resourses
 			resource_data.name = prototype.name
 			create_resourse_zones()
 		end
 	end
 
 	-- Oil between ore patches
-	start_x = -map_size / 2 + 100 + 65
+	start_x = init_start_x + occupied_distance - distance_between_resourses / 2
 	resource_data.amount = 12000
 	resource_data.name = "crude-oil"
 	for _ = 1, resource_count - 1 do
-		start_x = start_x + 100
+		start_x = start_x + occupied_distance
 		position[1] = start_x
-		start_y = -100
-		for j = 0, 3 do
-			position[2] = start_y + j * 10
-			create_entity(resource_data)
-		end
+		start_y = init_start_y
+		position[2] = start_y + resourse_size / 2
+		create_entity(resource_data)
 	end
 	resource_data.amount = 4294967295
 
 	-- Copy and paste ores ad oil
-	start_x = -map_size / 2 + 100
-	start_y = -100
+	start_x = init_start_x
+	start_y = init_start_y
 
 	source_left_top[1] = start_x
 	source_left_top[2] = start_y
-	source_right_bottom[1] = start_x + 100 + (100 * resource_count)
+	source_right_bottom[1] = start_x + occupied_distance + (occupied_distance * resource_count)
 	source_right_bottom[2] = start_y + 90
 
-	start_y = -start_y
+	start_y = -init_start_y
 	destination_left_top[1] = start_x
 	destination_left_top[2] = start_y
-	destination_right_bottom[1] = start_x +  100 + (100 * resource_count)
+	destination_right_bottom[1] = start_x + occupied_distance + (occupied_distance * resource_count)
 	destination_right_bottom[2] = start_y + 90
 	clone_area(clone_data)
 
 	source_left_top[1] = start_x
 	source_left_top[2] = -start_y
-	source_right_bottom[1] = start_x +  100 + (100 * resource_count)
+	source_right_bottom[1] = start_x + occupied_distance + (occupied_distance * resource_count)
 	source_right_bottom[2] = start_y + 90
 	while true do
-		start_x = start_x + 100 * (resource_count + 1)
+		start_x = start_x + occupied_distance * resource_count
 		if start_x > map_size / 2 - 200 then
 			break
 		end
 		destination_left_top[1] = start_x
 		destination_left_top[2] = -start_y
-		destination_right_bottom[1] = start_x + 100 + (100 * resource_count)
+		destination_right_bottom[1] = start_x + occupied_distance + (occupied_distance * resource_count)
 		destination_right_bottom[2] = start_y + 90
 		clone_area(clone_data)
 	end
@@ -1877,20 +1879,18 @@ M.events = {
 M.on_nth_tick = {
 	[60] = update_player_time_HUD,
 	[300] = check_map,
-	[60 * 60] = function(event)
-		check_is_settings_set(event)
-	end,
-	[60 * 60 * 1.5] = expand_biters,
-	[60 * 60 * 2] = check_techs,
-	[60 * 60 * 5] = start_new_wave,
-	[60 * 60 * 10] = function(event)
+	[60 * 60] = check_is_settings_set,
+	[60 * 60 * 1 - 1] = function(event)
 		if mod_data.spawn_per_wave >= 10 then return end
-		if event.tick < mod_data.last_wave_tick + (60 * 60 * 5) then
+		if event.tick < mod_data.last_wave_tick + (60 * 60 * 18) then
 			return
 		end
 		if mod_data.generate_new_round then return end
 		mod_data.spawn_per_wave = mod_data.spawn_per_wave + 1
 	end,
+	[60 * 60 * 1.5] = expand_biters,
+	[60 * 60 * 2] = check_techs,
+	[60 * 60 * 5] = start_new_wave,
 	[60 * 60 * 4] = function(event)
 		if mod_data.generate_new_round then return end
 		if mod_data.enemy_tech_lvl >= #biter_upgrades then return end
