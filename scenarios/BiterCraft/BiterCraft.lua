@@ -65,6 +65,16 @@ local function get_first_valid_prototype(prototypes, names)
 	end
 end
 
+local function find_target(entities)
+	for _ = 1, 100 do
+		local entity = entities[math.random(1, #entities)]
+		if entity.health and entity.destructible then
+			return entity
+		end
+	end
+	return mod_data.target_entity
+end
+
 ---Format: mm:ss
 ---@return string
 local function get_wave_time()
@@ -1519,11 +1529,11 @@ do
 						end
 						-- Command to attack
 						if player_entites then
-							attack_command_data.target = player_entites[math.random(1, #player_entites)]
+							attack_command_data.target = find_target(player_entites)
 						end
 						enemy_unit_group3.set_command(attack_command_data)
 						if player_entites then
-							attack_command_data.target = player_entites[math.random(1, #player_entites)]
+							attack_command_data.target = find_target(player_entites)
 						end
 						enemy_unit_group4.set_command(attack_command_data)
 					else
@@ -1550,11 +1560,11 @@ do
 						end
 						-- Command to attack
 						if player_entites then
-							attack_command_data.target = player_entites[math.random(1, #player_entites)]
+							attack_command_data.target = find_target(player_entites)
 						end
 						enemy_unit_group3.set_command(attack_command_data)
 						if player_entites then
-							attack_command_data.target = player_entites[math.random(1, #player_entites)]
+							attack_command_data.target = find_target(player_entites)
 						end
 						enemy_unit_group4.set_command(attack_command_data)
 					else
@@ -1573,11 +1583,11 @@ do
 				end
 				-- Command to attack
 				if player_entites then
-					attack_command_data.target = player_entites[math.random(1, #player_entites)]
+					attack_command_data.target = find_target(player_entites)
 				end
 				enemy_unit_group.set_command(attack_command_data)
 				if player_entites then
-					attack_command_data.target = player_entites[math.random(1, #player_entites)]
+					attack_command_data.target = find_target(player_entites)
 				end
 				enemy_unit_group2.set_command(attack_command_data)
 			end
@@ -1632,7 +1642,10 @@ end)
 
 commands.add_command("restart-round", {"BiterCraft-commands.restart-round"}, function(cmd)
 	if cmd.player_index == 0 then -- server
-		new_round()
+		local target_entity = mod_data.target_entity
+		if target_entity and target_entity.valid then
+			target_entity.die()
+		end
 		return
 	end
 
@@ -1643,7 +1656,10 @@ commands.add_command("restart-round", {"BiterCraft-commands.restart-round"}, fun
 		return
 	end
 
-	new_round()
+	local target_entity = mod_data.target_entity
+	if target_entity and target_entity.valid then
+		target_entity.die()
+	end
 end)
 
 commands.add_command("upgrade-biters", {"BiterCraft-commands.upgrade-biters"}, function(cmd)

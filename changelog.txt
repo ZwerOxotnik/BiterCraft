@@ -1,4 +1,10 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.11.1
+Date: 2023-05-11
+  Bugfixes:
+    - Fixed crash when a biters attacked an entity without health
+    - Improved stabiltiy for /restart-round command
+---------------------------------------------------------------------------------------------------
 Version: 0.11.0
 Date: 2023-05-11
   Changes:
