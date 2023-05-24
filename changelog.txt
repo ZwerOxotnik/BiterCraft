@@ -10,8 +10,8 @@ Date: 2023-05-11
   Changes:
     - Ore patches are smaller, but more frequent and closer
     - Biters doesn't evolve so quick because of time
-    - Added piercing rounds magazines to the market
-    - Added gun turrets to the market
+    - Added piercing rounds magazines into the market
+    - Added gun turrets into the market
     - Fewer places of water
 ---------------------------------------------------------------------------------------------------
 Version: 0.10.0
@@ -27,7 +27,7 @@ Date: 2023-05-08
   Changes:
     - Max amount of biters on one line is 300 per wave (when they are tripled)
     - Default map size is 1500
-    - Added wood in the market
+    - Added wood into the market
     - Removed wood from start chests
     - Better start gear
 ---------------------------------------------------------------------------------------------------
