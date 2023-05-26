@@ -6,8 +6,10 @@ local M = {}
 -- TODO: remind players about commands
 -- TODO: track player data
 
----@type ZKMarket
-local market_util = require("static-lib/lualibs/market-util")
+---@type ZOMarket
+market_util = require("static-lib/lualibs/market-util")
+---@type ZOsurface
+surface_util = require("static-lib/lualibs/surface-util")
 
 
 --#region Global game data
@@ -65,7 +67,7 @@ local function get_first_valid_prototype(prototypes, names)
 	end
 end
 
-local function find_target(entities)
+local function pick_random_entity(entities)
 	for _ = 1, 100 do
 		local entity = entities[math.random(1, #entities)]
 		if entity.health and entity.destructible then
@@ -403,28 +405,17 @@ end
 local function generate_map_territory()
 	local map_size = mod_data.map_size
 	local surface = game.get_surface(1)
-	local tiles = {}
 
 	-- Set refined-concrete tiles
-	local c = 0
-	for i = -100, 0 do
-		for j = -100, 0 do
-			c = c + 1
-			tiles[c] = {position = {i, j}, name = "refined-concrete"}
-			if c > 1024 then
-				surface.set_tiles(tiles, false, false, false)
-				tiles = {}
-				c = 0
-			end
-		end
-	end
+	surface_util.fill_box_with_tiles(surface, -100, 0, 100, "refined-concrete")
 
 	-- Set water tiles
-	c = 0
-	for i = -88, -86 do
-		for j = -88, -86 do
+	local tiles = {}
+	local c = 0
+	for x = -88, -86 do
+		for y = -88, -86 do
 			c = c + 1
-			tiles[c] = {position = {i, j}, name = "water"}
+			tiles[c] = {position = {x, y}, name = "water"}
 		end
 	end
 	surface.set_tiles(tiles, false, false, false)
@@ -477,21 +468,9 @@ function fill_map_with_water()
 	local map_size = mod_data.map_size
 	local half_size = map_size / 2
 	local surface = game.get_surface(1)
-	local tiles = {}
 
 	-- Set water tiles
-	local c = 0
-	for i = 1, half_size - 150 do
-		c = c + 1
-		tiles[c] = {position = {-half_size, -150 - i}, name = "water"}
-		if c > 1024 then
-			surface.set_tiles(tiles, false, false, false)
-			tiles = {}
-			c = 0
-		end
-	end
-	surface.set_tiles(tiles, false, false, false)
-
+	surface_util.fill_box_with_tiles(surface, -half_size, -150, half_size - 150, "water")
 
 	surface.clone_area{
 		source_area = {
@@ -757,45 +736,32 @@ local function create_resources()
 	local position = {0, 0}
 	local resource_data = {name="", amount=4294967295, snap_to_tile_center=true, position=position}
 
-	local resourse_size = 15
+	local resource_size = 16
 	local distance_between_resourses = 15
-	local occupied_distance = resourse_size + distance_between_resourses
+	local occupied_distance = resource_size + distance_between_resourses
 	local init_start_x = -map_size / 2 + 45
 	local start_x = init_start_x
 	local init_start_y = -45
 	local start_y = init_start_y
 
 	local function create_resourse_zones()
-		for x = 0, resourse_size do
-			for y = 0, resourse_size do
-				position[1] = start_x + x
-				position[2] = start_y + y
-				create_entity(resource_data)
-			end
-		end
-
-		-- source_left_top[1] = start_x
-		-- source_left_top[2] = start_y
-		-- source_right_bottom[1] = start_x + resourse_size
-		-- source_right_bottom[2] = start_y + resourse_size
-		-- for x = 0, 2 do
-		-- 	destination_left_top[1] = start_x + (x * resourse_size)
-		-- 	destination_right_bottom[1] = start_x + (x * resourse_size) + resourse_size
-		-- 	for y = 0, 2 do
-		-- 		if x ~= 0 or y ~= 0 then
-		-- 			destination_left_top[2] = start_y + (y * resourse_size)
-		-- 			destination_right_bottom[2] = start_y + (y * resourse_size) + resourse_size
-		-- 			clone_area(clone_data)
-		-- 		end
-		-- 	end
-		-- end
+		surface_util.fill_box_with_resourses(
+			surface, start_x, start_y + resource_size,
+			resource_size, resource_data.name, resource_data.amount,
+			{
+				destination_force="neutral", clone_tiles=false, clone_entities=true,
+				clone_decoratives=false, clear_destination_entities=false,
+				clear_destination_decoratives=false, expand_map=false,
+				create_build_effect_smoke=false
+			}
+		)
 	end
 
 	local resource_count = 0
 	for _, prototype in pairs(game.entity_prototypes) do
 		if prototype.type == "resource" and prototype.name ~= "crude-oil" then
 			resource_count = resource_count + 1
-			start_x = start_x + resourse_size + distance_between_resourses
+			start_x = start_x + resource_size + distance_between_resourses
 			resource_data.name = prototype.name
 			create_resourse_zones()
 		end
@@ -809,7 +775,7 @@ local function create_resources()
 		start_x = start_x + occupied_distance
 		position[1] = start_x
 		start_y = init_start_y
-		position[2] = start_y + resourse_size / 2
+		position[2] = start_y + resource_size / 2
 		create_entity(resource_data)
 	end
 	resource_data.amount = 4294967295
@@ -1529,11 +1495,11 @@ do
 						end
 						-- Command to attack
 						if player_entites then
-							attack_command_data.target = find_target(player_entites)
+							attack_command_data.target = pick_random_entity(player_entites)
 						end
 						enemy_unit_group3.set_command(attack_command_data)
 						if player_entites then
-							attack_command_data.target = find_target(player_entites)
+							attack_command_data.target = pick_random_entity(player_entites)
 						end
 						enemy_unit_group4.set_command(attack_command_data)
 					else
@@ -1560,11 +1526,11 @@ do
 						end
 						-- Command to attack
 						if player_entites then
-							attack_command_data.target = find_target(player_entites)
+							attack_command_data.target = pick_random_entity(player_entites)
 						end
 						enemy_unit_group3.set_command(attack_command_data)
 						if player_entites then
-							attack_command_data.target = find_target(player_entites)
+							attack_command_data.target = pick_random_entity(player_entites)
 						end
 						enemy_unit_group4.set_command(attack_command_data)
 					else
@@ -1583,11 +1549,11 @@ do
 				end
 				-- Command to attack
 				if player_entites then
-					attack_command_data.target = find_target(player_entites)
+					attack_command_data.target = pick_random_entity(player_entites)
 				end
 				enemy_unit_group.set_command(attack_command_data)
 				if player_entites then
-					attack_command_data.target = find_target(player_entites)
+					attack_command_data.target = pick_random_entity(player_entites)
 				end
 				enemy_unit_group2.set_command(attack_command_data)
 			end
