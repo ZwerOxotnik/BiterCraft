@@ -401,6 +401,12 @@ do
 	end
 end
 
+-- TODO:improve
+local function generate_water_tiles()
+	local surface = game.get_surface(1)
+	surface_util.fill_box_with_tiles(surface, -88, -88, 3, "water")
+end
+
 -- TODO: Refactor everything and make on "stages"!
 local function generate_map_territory()
 	local map_size = mod_data.map_size
@@ -408,17 +414,7 @@ local function generate_map_territory()
 
 	-- Set refined-concrete tiles
 	surface_util.fill_box_with_tiles(surface, -100, 0, 100, "refined-concrete")
-
-	-- Set water tiles
-	local tiles = {}
-	local c = 0
-	for x = -88, -86 do
-		for y = -88, -86 do
-			c = c + 1
-			tiles[c] = {position = {x, y}, name = "water"}
-		end
-	end
-	surface.set_tiles(tiles, false, false, false)
+	generate_water_tiles()
 
 	local length = 100
 	local steps = floor(map_size / 2 / length)
@@ -566,7 +562,7 @@ local function make_defend_lines()
 	}
 	local h_size = floor(defend_lines_count/2)
 	local c = 0
-	for i = -h_size, h_size do
+	for i = -h_size, h_size - ((defend_lines_count % 2 == 0 and 1) or 0) do
 		destination_left_top[1] = map_border
 		destination_left_top[2] = (length/2) * i
 		destination_right_bottom[1] = map_border + length
@@ -1076,9 +1072,13 @@ local function on_game_created_from_scenario()
 
 	game.forces.enemy.evolution_factor = evolution_values[1]
 
-	generate_map_territory()
+	if mod_data.is_new_map_changes then
+		generate_map_territory()
+	end
 	if mod_data.is_map_filled_with_water then
 		fill_map_with_water()
+	else
+		generate_water_tiles()
 	end
 	create_resources() -- the map shouldn't have entities
 	make_defend_target()
@@ -1105,6 +1105,7 @@ local function on_game_created_from_scenario()
 
 	update_player_wave_HUD()
 	print_defend_points()
+	mod_data.is_new_map_changes = false
 end
 
 
@@ -1191,6 +1192,9 @@ local GUIS = {
 				map_size = 1000000
 			end
 			mod_data.next_map_size = map_size
+			if mod_data.next_map_size ~= mod_data.map_size then
+				mod_data.is_new_map_changes = true
+			end
 
 			local is_always_day_checkbox = main_frame.BC_is_always_day_flow.BC_is_always_day_checkbox
 			mod_data.is_always_day = is_always_day_checkbox.state
@@ -1200,6 +1204,9 @@ local GUIS = {
 			mod_data.is_attack_random_building = BC_is_attack_random_building_checkbox.state
 
 			local fill_water_checkbox = main_frame.BC_fill_water_flow.BC_fill_water_checkbox
+			if mod_data.is_map_filled_with_water ~= fill_water_checkbox.state then
+				mod_data.is_new_map_changes = true
+			end
 			mod_data.is_map_filled_with_water = fill_water_checkbox.state
 
 			local enemies_depends_on_techs_checkbox = main_frame.BC_enemies_depends_on_techs_flow.BC_enemies_depends_on_techs_checkbox
@@ -1716,20 +1723,12 @@ function new_round()
 	game.reset_time_played() -- is this safe?
 
 	local surface = game.get_surface(1)
-	surface.clear(true) -- ignores characters
 
 	for _, force in pairs(game.forces) do
 		force.reset()
 		force.reset_evolution() -- is this useful?
 	end
 	game.forces.player.friendly_fire = false
-
-	-- Temporary workaround
-	game.forces.enemy.kill_all_units()
-	local entities = surface.find_entities_filtered{force="enemy"}
-	for i=1, #entities do
-		entities[i].destroy()
-	end
 
 	game.remove_offline_players()
 	for _, player in pairs(game.players) do
@@ -1750,6 +1749,17 @@ function new_round()
 	mod_data.generate_new_round_tick = game.tick + 300
 	mod_data.main_market = nil
 	mod_data.current_wave = 0
+
+	if mod_data.is_new_map_changes == false then
+		local destroy_param = {raise_destroy = true}
+		local entities = surface.find_entities_filtered({type = "character", invert = true})
+		for i=1, #entities do
+			entities[i].destroy(destroy_param)
+		end
+		on_game_created_from_scenario()
+	else
+		surface.clear(true) -- ignores characters
+	end
 end
 
 
@@ -1774,7 +1784,7 @@ function update_global_data()
 	mod_data = global.BiterCraft
 	mod_data.main_market_indexes = mod_data.main_market_indexes or {}
 	mod_data.bonuses = mod_data.bonuses or {}
-	mod_data.map_size = mod_data.map_size or 1500
+	mod_data.map_size = mod_data.map_size or 1600
 	mod_data.next_map_size = mod_data.next_map_size or mod_data.map_size
 	mod_data.defend_lines_count = mod_data.defend_lines_count or 5
 	mod_data.current_wave = mod_data.current_wave or 0
@@ -1787,6 +1797,7 @@ function update_global_data()
 	mod_data.is_settings_set = mod_data.is_settings_set or false
 	mod_data.is_research_all = mod_data.is_research_all or false
 	mod_data.is_always_day = mod_data.is_always_day or false
+	mod_data.is_new_map_changes = mod_data.is_new_map_changes or true
 	mod_data.is_attack_random_building = mod_data.is_attack_random_building or false
 	if mod_data.enemy_expansion_mode == nil then
 		mod_data.enemy_expansion_mode = mod_data.infection_mode or false

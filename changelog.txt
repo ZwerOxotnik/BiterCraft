@@ -1,4 +1,12 @@
 ﻿---------------------------------------------------------------------------------------------------
+Version: 0.11.3
+Date: 2023-05-26
+  Changes:
+    - Map doesn't recreate after rounds
+    - Default map size is 1600
+  Bugfixes:
+    - Fixed defend lines count for some numbers
+---------------------------------------------------------------------------------------------------
 Version: 0.11.2
 Date: 2023-05-26
   Changes:
