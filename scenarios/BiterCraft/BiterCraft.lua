@@ -348,7 +348,7 @@ function delete_settings_gui()
 	end
 end
 
-function teleport_players(players, target_position)
+function teleport_players_safely(players, target_position)
 	target_position = target_position or {0, 0}
 	local surface = game.get_surface(1)
 	for _, player in pairs(players) do
@@ -741,11 +741,11 @@ local function create_resources()
 	local start_y = init_start_y
 
 	local function create_resourse_zones()
-		surface_util.fill_box_with_resourses(
+		surface_util.fill_box_with_resources(
 			surface, start_x, start_y + resource_size,
 			resource_size, resource_data.name, resource_data.amount,
 			{
-				destination_force="neutral", clone_tiles=false, clone_entities=true,
+				clone_tiles=false,
 				clone_decoratives=false, clear_destination_entities=false,
 				clear_destination_decoratives=false, expand_map=false,
 				create_build_effect_smoke=false
@@ -1101,7 +1101,7 @@ local function on_game_created_from_scenario()
 
 	local player_force = game.forces.player
 	player_force.chart_all(surface)
-	teleport_players(game.players, {0, 0})
+	teleport_players_safely(game.players, {0, 0})
 
 	update_player_wave_HUD()
 	print_defend_points()
@@ -1204,9 +1204,6 @@ local GUIS = {
 			mod_data.is_attack_random_building = BC_is_attack_random_building_checkbox.state
 
 			local fill_water_checkbox = main_frame.BC_fill_water_flow.BC_fill_water_checkbox
-			if mod_data.is_map_filled_with_water ~= fill_water_checkbox.state then
-				mod_data.is_new_map_changes = true
-			end
 			mod_data.is_map_filled_with_water = fill_water_checkbox.state
 
 			local enemies_depends_on_techs_checkbox = main_frame.BC_enemies_depends_on_techs_flow.BC_enemies_depends_on_techs_checkbox
@@ -1759,6 +1756,7 @@ function new_round()
 		on_game_created_from_scenario()
 	else
 		surface.clear(true) -- ignores characters
+		teleport_players_safely(game.players, {0, 0})
 	end
 end
 
