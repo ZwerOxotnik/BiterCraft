@@ -10,6 +10,11 @@ local M = {}
 market_util = require("static-lib/lualibs/market-util")
 ---@type ZOsurface
 surface_util = require("static-lib/lualibs/surface-util")
+force_util = require("static-lib/lualibs/force-util")
+inventory_util = require("static-lib/lualibs/inventory-util")
+prototype_util = require("static-lib/lualibs/prototype-util")
+player_util = require("static-lib/lualibs/LuaPlayer")
+time_util = require("static-lib/lualibs/time-util")
 
 
 --#region Global game data
@@ -18,6 +23,8 @@ local player_HUD_data
 --#endregion
 
 
+local WAVE_TICKS = 60 * 60 * 5
+local START_TECHS = require("start_techs")
 local START_PLAYER_ITEMS = require("start_player_items")
 local START_BASE_ITEMS = require("start_base_items")
 local random = math.random
@@ -58,15 +65,6 @@ local evolution_values = {
 
 --#region Util
 
---TODO: Refactor?
-local function get_first_valid_prototype(prototypes, names)
-	for _, name in pairs(names) do
-		if prototypes[name] then
-			return name
-		end
-	end
-end
-
 local function pick_random_entity(entities)
 	for _ = 1, 100 do
 		local entity = entities[math.random(1, #entities)]
@@ -75,36 +73,6 @@ local function pick_random_entity(entities)
 		end
 	end
 	return mod_data.target_entity
-end
-
----Format: mm:ss
----@return string
-local function get_wave_time()
-	local next_wave_tick = mod_data.last_wave_tick + (60 * 60 * 5)
-	local tick = next_wave_tick - game.tick
-
-	local ticks_in_1_second = 60 * game.speed
-	local ticks_in_1_minute = 60 * ticks_in_1_second
-	local mins = floor(tick / ticks_in_1_minute)
-	local seconds = floor((tick - (mins * ticks_in_1_minute)) / ticks_in_1_second)
-
-	if mins < 10 then
-		if mins == 0 then
-			mins = "00"
-		else
-			mins = "0" .. mins
-		end
-	end
-
-	if seconds < 10 then
-		if seconds == 0 then
-			seconds = "00"
-		else
-			seconds = "0" .. seconds
-		end
-	end
-
-	return mins .. ":" .. seconds
 end
 
 ---@param s string
@@ -120,41 +88,6 @@ local function find_chest()
 	for name, chest in pairs(game.entity_prototypes) do
 		if chest.type == "container" then
 			return name
-		end
-	end
-end
-
-local function teleport_safely(player, surface, target_position)
-	local character = player.character
-	if not (character and character.valid) then
-		player.teleport(target_position, surface)
-	else
-		local target
-		local is_vehicle = false
-		local vehicle = player.vehicle
-		local target_name
-		if vehicle and not vehicle.train and vehicle.get_driver() == character and vehicle.get_passenger() == nil then
-			target = vehicle
-			target_name = vehicle.name
-			is_vehicle = true
-		else
-			target = player
-			target_name = character.name
-		end
-		local radius = 200
-		local non_colliding_position = surface.find_non_colliding_position(target_name, target_position, radius, 5)
-
-		if non_colliding_position then
-			if is_vehicle then
-				if vehicle.type == "spider-vehicle" then
-					target.stop_spider()
-				else
-					target.speed = 0
-				end
-			end
-			target.teleport(non_colliding_position, surface)
-		else
-			player.print("It's not possible to teleport you because there's not enough space for your character")
 		end
 	end
 end
@@ -192,59 +125,7 @@ function apply_bonuses()
 end
 
 function research_techs()
-	local technologies = game.forces.player.technologies
-
-	local tech_list = {
-		"military",
-		"logistics",
-		"stone-wall",
-		"gate",
-		"gun-turret",
-		"optics",
-		"optics-2", -- From another mod
-		"optics-3", -- From another mod
-		"cclp", -- From Color_Combinator_Lamp_Posts mod
-		"automation",
-		"electronics",
-		"fast-inserter",
-		"automation-2",
-		"electric-energy-distribution-1",
-		"steel-processing",
-		"steel-axe",
-		"textplates-steel", -- From textplates mod
-		"engine",
-		"railway",
-		"automated-rail-signals",
-		"automated-rail-transportation",
-		"trainassembly-automated-train-assembling", -- From trainConstructionSite mod
-		"trainfuel-2", -- From trainConstructionSite mod
-		"rail-signals",
-		"logistic-science-pack",
-		"circuit-network"
-	}
-	for _, tech_name in pairs(tech_list) do
-		local tech = technologies[tech_name]
-		if tech then
-			tech.researched = true
-		end
-	end
-end
-
-function count_techs(team_name)
-	local researched_techs = 0
-	local total_techs = 0
-
-	local technologies = game.forces[team_name].technologies
-	for _, tech in pairs(technologies) do
-		if tech.research_unit_count_formula == nil and not tech.upgrade then
-			total_techs = total_techs + 1
-			if tech.researched then
-				researched_techs = researched_techs + 1
-			end
-		end
-	end
-
-	return researched_techs, total_techs
+	force_util.research_techs_safely(game.forces.player, START_TECHS)
 end
 
 function update_player_wave_HUD()
@@ -254,8 +135,10 @@ function update_player_wave_HUD()
 	end
 end
 
-function update_player_time_HUD(event)
-	local time = get_wave_time()
+function update_player_time_HUD()
+	local next_wave_tick = mod_data.last_wave_tick + WAVE_TICKS
+	local tick = next_wave_tick - game.tick
+	local time = time_util.ticks_to_game_mm_ss(tick)
 	for _, HUDs in pairs(player_HUD_data) do
 		HUDs[2].caption = time
 	end
@@ -268,7 +151,7 @@ function insert_start_items(player)
 	local surface = game.get_surface(1)
 
 	local cars = {"turbo-bike", "car"}
-	local car_name = get_first_valid_prototype(game.entity_prototypes, cars)
+	local car_name = prototype_util.get_first_valid_prototype(game.entity_prototypes, cars)
 	local car
 	if car_name then
 		local non_colliding_position = surface.find_non_colliding_position(car_name, {-10, 0}, 200, 5)
@@ -292,13 +175,8 @@ function insert_start_items(player)
 		end
 	end
 
-	teleport_safely(player, surface, {0, 0})
-
-	for _, item_data in pairs(START_PLAYER_ITEMS) do
-		if item_prototypes[item_data.name] then
-			player.insert(item_data)
-		end
-	end
+	player_util.teleport_safely(player, surface, {0, 0})
+	inventory_util.insert_items_safely(player, START_PLAYER_ITEMS)
 end
 
 function print_defend_points(player)
@@ -328,11 +206,7 @@ function print_defend_points(player)
 	if player then
 		player.print(message, YELLOW_COLOR)
 	else
-		for _, _player in pairs(game.connected_players) do
-			if _player.valid then
-				_player.print(message, YELLOW_COLOR)
-			end
-		end
+		player_util.print_to_players(game.connected_players, message, YELLOW_COLOR)
 	end
 end
 
@@ -352,9 +226,7 @@ function teleport_players_safely(players, target_position)
 	target_position = target_position or {0, 0}
 	local surface = game.get_surface(1)
 	for _, player in pairs(players) do
-		if player.valid then
-			teleport_safely(player, surface, target_position)
-		end
+		player_util.teleport_safely(player, surface, target_position)
 	end
 end
 
@@ -846,7 +718,10 @@ function create_info_HUD(player)
 	wave_label.caption = tostring(mod_data.current_wave + 1)
 	main_frame.add(LABEL).caption = {"BiterCraft-HUD.in"}
 	local time_label = main_frame.add(LABEL)
-	time_label.caption = get_wave_time()
+
+	local next_wave_tick = mod_data.last_wave_tick + WAVE_TICKS
+	local tick = next_wave_tick - game.tick
+	time_label.caption = time_util.ticks_to_game_mm_ss(tick)
 
 	player_HUD_data[player.index] = {wave_label, time_label}
 end
@@ -1397,10 +1272,9 @@ function check_techs()
 	if enemy_tech_lvl >= #biter_upgrades then return end
 
 	-- TODO: add settings
-	local researched_techs, total_techs = count_techs("player")
-	local tech_ratio = researched_techs / total_techs
+	local _, _, tech_ratio = force_util.count_techs(game.forces.player)
 	for tech_level, req_tech_ratio in pairs(tech_ratios) do
-		if enemy_tech_lvl < tech_level and  tech_ratio > req_tech_ratio then
+		if enemy_tech_lvl < tech_level and tech_ratio > req_tech_ratio then
 			for _ = 1, tech_level - enemy_tech_lvl do
 				upgrade_biters() -- TODO: refactor
 			end
@@ -1658,7 +1532,7 @@ commands.add_command("base", {"BiterCraft-commands.base"}, function(cmd)
 
 	local surface = game.get_surface(1)
 	local target_position = {0, 0}
-	teleport_safely(player, surface, target_position)
+	player_util.teleport_safely(player, surface, target_position)
 end)
 
 commands.add_command("change-settings", {"BiterCraft-commands.change-settings"}, function(cmd)
@@ -1712,7 +1586,7 @@ commands.add_command("tp", {"BiterCraft-commands.tp"}, function(cmd)
 	if target_player == player then return end
 
 	local surface = game.get_surface(1)
-	teleport_safely(player, surface, target_player.position)
+	player_util.teleport_safely(player, surface, target_player.position)
 end)
 
 
