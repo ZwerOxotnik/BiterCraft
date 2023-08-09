@@ -7,13 +7,13 @@ local M = {}
 -- TODO: track player data
 
 ---@type ZOMarket
-market_util = require("static-lib/lualibs/market-util")
+market_util = require("static-lib/lualibs/control_stage/market-util")
 ---@type ZOsurface
-surface_util = require("static-lib/lualibs/surface-util")
-force_util = require("static-lib/lualibs/force-util")
-inventory_util = require("static-lib/lualibs/inventory-util")
-prototype_util = require("static-lib/lualibs/prototype-util")
-player_util = require("static-lib/lualibs/LuaPlayer")
+surface_util = require("static-lib/lualibs/control_stage/surface-util")
+force_util = require("static-lib/lualibs/control_stage/force-util")
+inventory_util = require("static-lib/lualibs//control_stage/inventory-util")
+prototype_util = require("static-lib/lualibs/control_stage/prototype-util")
+player_util = require("static-lib/lualibs/control_stage/player-util")
 time_util = require("static-lib/lualibs/time-util")
 
 
