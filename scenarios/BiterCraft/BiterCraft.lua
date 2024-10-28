@@ -82,10 +82,10 @@ end
 
 local function find_chest()
 	local chest_name = "steel-chest"
-	if game.entity_prototypes[chest_name] then return chest_name end
+	if prototypes.entity[chest_name] then return chest_name end
 	log("Starting chest " .. chest_name .. " is not a valid entity prototype, picking a new container from prototype list")
 
-	for name, chest in pairs(game.entity_prototypes) do
+	for name, chest in pairs(prototypes.entity) do
 		if chest.type == "container" then
 			return name
 		end
@@ -147,11 +147,11 @@ end
 function insert_start_items(player)
 	mod_data.init_players[player.index] = game.tick
 
-	local item_prototypes = game.item_prototypes
+	local item_prototypes = prototypes.item
 	local surface = game.get_surface(1)
 
 	local cars = {"turbo-bike", "car"}
-	local car_name = prototype_util.get_first_valid_prototype(game.entity_prototypes, cars)
+	local car_name = prototype_util.get_first_valid_prototype(prototypes.entity, cars)
 	local car
 	if car_name then
 		local non_colliding_position = surface.find_non_colliding_position(car_name, {-10, 0}, 200, 5)
@@ -168,7 +168,7 @@ function insert_start_items(player)
 				car.insert(stack)
 			end
 		else
-			if game.item_prototypes[car_name] then
+			if prototypes.item[car_name] then
 				local stack = {name = car_name, count = 1}
 				player.insert(stack)
 			end
@@ -252,7 +252,7 @@ do
 		local create_entity = surface.create_entity
 		local enemy_tech_lvl = mod_data.enemy_tech_lvl
 
-		game.forces.enemy.evolution_factor = evolution_values[enemy_tech_lvl]
+		game.forces.enemy.set_evolution_factor(evolution_values[enemy_tech_lvl], 1)
 
 		biter_data.name = biter_upgrades[enemy_tech_lvl] or biter_upgrades[#biter_upgrades]
 		for _ = 1, spawn_count do
@@ -487,10 +487,10 @@ local function make_defend_target()
 	}
 	entity.minable = false
 	mod_data.target_entity = entity
-	mod_data.entity_target_event_id = script.register_on_entity_destroyed(entity)
+	mod_data.entity_target_event_id = script.register_on_object_destroyed(entity)
 
 	local market_name = "market"
-	if game.entity_prototypes[market_name] then
+	if prototypes.entity[market_name] then
 		local market = surface.create_entity{
 			name = market_name, force = "player",
 			position = {-6, 0}
@@ -502,13 +502,13 @@ local function make_defend_target()
 		mod_data.main_market = market
 
 		market_util.add_offers_safely(market, DEFAULT_MARKET_OFFERS)
-		market_util.add_offer_safely(market, {price={{"steel-plate", 1000}}, offer={type="gun-speed", ammo_category = "bullet", modifier = 0.2}})
+		market_util.add_offer_safely(market, {price={{name = "steel-plate", count = 1000}}, offer={type="gun-speed", ammo_category = "bullet", modifier = 0.2}})
 		mod_data.main_market_indexes["bullet-gun-speed"] = #market.get_market_items()
 		mod_data.bonuses["bullet-gun-speed"] = 1
 	end
 
 	local turret_name = "gun-turret"
-	if game.entity_prototypes[turret_name] then
+	if prototypes.entity[turret_name] then
 		for i = 1, 5 do
 			local turret = surface.create_entity{
 				name = turret_name, force = "player",
@@ -516,14 +516,14 @@ local function make_defend_target()
 			}
 
 			local ammo_name = "firearm-magazine"
-			if game.item_prototypes[ammo_name] then
+			if prototypes.item[ammo_name] then
 				local stack = {name = ammo_name, count = 200}
 				turret.insert(stack)
 			end
 		end
 	end
 
-	if game.entity_prototypes["electric-energy-interface"] then
+	if prototypes.entity["electric-energy-interface"] then
 		entity = surface.create_entity{
 			name = "electric-energy-interface", force = "player",
 			position = {-15, 0}
@@ -536,14 +536,14 @@ local function make_defend_target()
 		entity.power_usage = 0
 	end
 
-	if game.entity_prototypes["substation"] then
+	if prototypes.entity["substation"] then
 		entity = surface.create_entity{
 			name = "substation", force = "player",
 			position = {-18, 0}
 		}
 	end
 
-	if game.entity_prototypes["radar"] then
+	if prototypes.entity["radar"] then
 		entity = surface.create_entity{
 			name = "radar", force = "player",
 			position = {-22, 0}
@@ -560,7 +560,7 @@ local function make_defend_target()
 		local non_colliding_position = surface.find_non_colliding_position(container_name, target_position, 100, 1.5)
 		target = surface.create_entity{name = container_name, position = non_colliding_position, force = "player", create_build_effect_smoke = false}
 		for _, item in pairs(START_BASE_ITEMS) do
-			if game.item_prototypes[item.name] then
+			if prototypes.item[item.name] then
 				item_stack.name = item.name
 				item_stack.count = item.count
 				while item_stack.count > 0 do
@@ -626,7 +626,7 @@ local function create_resources()
 	end
 
 	local resource_count = 0
-	for _, prototype in pairs(game.entity_prototypes) do
+	for _, prototype in pairs(prototypes.entity) do
 		if prototype.type == "resource" and prototype.name ~= "crude-oil" then
 			resource_count = resource_count + 1
 			start_x = start_x + resource_size + distance_between_resourses
@@ -879,7 +879,7 @@ local function on_market_item_purchased(event)
 		local bonuses = mod_data.bonuses
 		local modifier = bonuses["bullet-gun-speed"] + 1
 		bonuses["bullet-gun-speed"] = modifier
-		market_util.add_offer_safely(market, {price={{"steel-plate", 1000 * modifier}}, offer={type="gun-speed", ammo_category = "bullet", modifier = 0.2}})
+		market_util.add_offer_safely(market, {price={{name = "steel-plate", count = 1000 * modifier}}, offer={type="gun-speed", ammo_category = "bullet", modifier = 0.2}})
 		market.remove_market_item(offer_index)
 		market_indexes["bullet-gun-speed"] = #market.get_market_items()
 	end
@@ -945,7 +945,7 @@ local function on_game_created_from_scenario()
 	mod_data.spawn_enemy_count = 0
 	mod_data.enemy_tech_lvl = 1
 
-	game.forces.enemy.evolution_factor = evolution_values[1]
+	game.forces.enemy.set_evolution_factor(evolution_values[1], 1)
 
 	if mod_data.is_new_map_changes then
 		generate_map_territory()
@@ -984,7 +984,7 @@ local function on_game_created_from_scenario()
 end
 
 
-local function on_entity_destroyed(event)
+local function on_object_destroyed(event)
 	if mod_data.entity_target_event_id ~= event.registration_number then
 		return
 	end
@@ -1643,7 +1643,7 @@ end
 
 
 function link_data()
-	mod_data = global.BiterCraft
+	mod_data = storage.BiterCraft
 	player_HUD_data = mod_data.player_HUD_data
 end
 
@@ -1652,8 +1652,8 @@ function update_global_data()
 	local surface = game.get_surface(1)
 	surface.generate_with_lab_tiles = true
 
-	global.BiterCraft = global.BiterCraft or {}
-	mod_data = global.BiterCraft
+	storage.BiterCraft = storage.BiterCraft or {}
+	mod_data = storage.BiterCraft
 	mod_data.main_market_indexes = mod_data.main_market_indexes or {}
 	mod_data.bonuses = mod_data.bonuses or {}
 	mod_data.map_size = mod_data.map_size or 1600
@@ -1736,7 +1736,7 @@ M.events = {
 	[defines.events.on_player_created] = on_player_created,
 	[defines.events.on_player_removed] = on_player_removed,
 	[defines.events.on_gui_click] = on_gui_click,
-	[defines.events.on_entity_destroyed] = on_entity_destroyed,
+	[defines.events.on_object_destroyed] = on_object_destroyed,
 	[defines.events.on_research_finished] = on_research_finished,
 	[defines.events.on_market_item_purchased] = on_market_item_purchased
 }
